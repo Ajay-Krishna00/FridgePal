@@ -1,14 +1,21 @@
 import React from 'react';
 import { SafeAreaView, View, Text, StyleSheet, StatusBar } from 'react-native';
+import store from "./store/store";
+import { Provider } from 'react-redux';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.card}>
-        <Text style={styles.title}> FridgePal</Text>
-      </View>
-    </SafeAreaView>
+    <Provider store={store}>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="dark-content" />
+          <View style={styles.card}>
+            <Text style={styles.title}> FridgePal</Text>
+          </View>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </Provider>
   );
 }
 
