@@ -18,7 +18,7 @@ const MainTab = () => {
                 let iconName;
                 if (route.name === "Home") iconName = "home-outline";
                 else if (route.name === "Recipe") iconName ="account-outline";
-                else if (route.name === "CalTracker") iconName = "heart-plus-outline";
+                else if (route.name === "CalTracker") ;//iconName = "heart-plus-outline";
                 else if (route.name === "AddItem") iconName = "cog-outline";
 
                 return {
