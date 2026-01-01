@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS } from '../utils/constants';
 
-const CircularProgress = ({ 
-  progress = 0, 
-  size = 100, 
-  strokeWidth = 10, 
+const CircularProgress = ({
+  progress = 0,
+  size = 100,
+  strokeWidth = 10,
   color = COLORS.primary,
   backgroundColor = COLORS.border,
   label,
@@ -15,26 +15,27 @@ const CircularProgress = ({
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (Math.min(progress, 1) * circumference);
-  
+  const strokeDashoffset =
+    circumference - Math.min(progress, 1) * circumference;
+
   return (
     <View style={[styles.container, { width: size, height: size }]}>
       <View style={styles.svgContainer}>
         {/* Background Circle */}
-        <View 
+        <View
           style={[
-            styles.circle, 
-            { 
-              width: size, 
-              height: size, 
+            styles.circle,
+            {
+              width: size,
+              height: size,
               borderRadius: size / 2,
               borderWidth: strokeWidth,
               borderColor: backgroundColor,
-            }
-          ]} 
+            },
+          ]}
         />
         {/* Progress Circle - Using a simplified approach */}
-        <View 
+        <View
           style={[
             styles.progressCircle,
             {
@@ -48,7 +49,7 @@ const CircularProgress = ({
               borderBottomColor: progress > 0.5 ? color : 'transparent',
               borderLeftColor: progress > 0.75 ? color : 'transparent',
               transform: [{ rotate: '-90deg' }],
-            }
+            },
           ]}
         />
       </View>
@@ -88,39 +89,42 @@ const ProgressBar = ({
           {label && <Text style={styles.barLabel}>{label}</Text>}
           {showValue && (
             <Text style={styles.barValue}>
-              {value !== undefined ? `${value}${unit ? ` ${unit}` : ''}` : `${Math.round(progress * 100)}%`}
-              {maxValue !== undefined && ` / ${maxValue}${unit ? ` ${unit}` : ''}`}
+              {value !== undefined
+                ? `${value}${unit ? ` ${unit}` : ''}`
+                : `${Math.round(progress * 100)}%`}
+              {maxValue !== undefined &&
+                ` / ${maxValue}${unit ? ` ${unit}` : ''}`}
             </Text>
           )}
         </View>
       )}
       <View style={[styles.barBg, { height, backgroundColor }]}>
-        <View 
+        <View
           style={[
-            styles.barFill, 
-            { 
-              width: `${Math.min(progress, 1) * 100}%`, 
+            styles.barFill,
+            {
+              width: `${Math.min(progress, 1) * 100}%`,
               backgroundColor: color,
               height,
-            }
-          ]} 
+            },
+          ]}
         />
       </View>
     </View>
   );
 };
 
-const NutritionProgress = ({ 
-  label, 
-  current, 
-  goal, 
-  unit = 'g', 
+const NutritionProgress = ({
+  label,
+  current,
+  goal,
+  unit = 'g',
   color = COLORS.primary,
   icon,
 }) => {
   const progress = goal > 0 ? current / goal : 0;
   const isOver = current > goal;
-  
+
   return (
     <View style={styles.nutritionContainer}>
       <View style={styles.nutritionHeader}>
@@ -133,14 +137,14 @@ const NutritionProgress = ({
         </Text>
       </View>
       <View style={styles.nutritionBarBg}>
-        <View 
+        <View
           style={[
             styles.nutritionBarFill,
-            { 
+            {
               width: `${Math.min(progress, 1) * 100}%`,
               backgroundColor: isOver ? COLORS.danger : color,
-            }
-          ]} 
+            },
+          ]}
         />
       </View>
     </View>
@@ -182,7 +186,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
   },
-  
+
   // Progress Bar
   barContainer: {
     width: '100%',
@@ -210,7 +214,7 @@ const styles = StyleSheet.create({
   barFill: {
     borderRadius: 4,
   },
-  
+
   // Nutrition Progress
   nutritionContainer: {
     marginBottom: 16,

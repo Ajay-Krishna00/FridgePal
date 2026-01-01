@@ -3,7 +3,7 @@
 /**
  * Calculate days until expiry
  */
-export const getDaysUntilExpiry = (expiryDate) => {
+export const getDaysUntilExpiry = expiryDate => {
   const today = new Date();
   const expiry = new Date(expiryDate);
   const diffTime = expiry - today;
@@ -14,18 +14,21 @@ export const getDaysUntilExpiry = (expiryDate) => {
 /**
  * Get freshness status based on expiry
  */
-export const getFreshnessStatus = (expiryDate) => {
+export const getFreshnessStatus = expiryDate => {
   const days = getDaysUntilExpiry(expiryDate);
-  if (days < 0) return { status: 'expired', color: '#EF4444', label: 'Expired' };
-  if (days <= 2) return { status: 'expiring', color: '#F97316', label: 'Use Soon!' };
-  if (days <= 5) return { status: 'moderate', color: '#F59E0B', label: `${days} days left` };
+  if (days < 0)
+    return { status: 'expired', color: '#EF4444', label: 'Expired' };
+  if (days <= 2)
+    return { status: 'expiring', color: '#F97316', label: 'Use Soon!' };
+  if (days <= 5)
+    return { status: 'moderate', color: '#F59E0B', label: `${days} days left` };
   return { status: 'fresh', color: '#22C55E', label: `${days} days left` };
 };
 
 /**
  * Format date to readable string
  */
-export const formatDate = (date) => {
+export const formatDate = date => {
   const options = { month: 'short', day: 'numeric' };
   return new Date(date).toLocaleDateString('en-US', options);
 };
@@ -37,11 +40,11 @@ export const calculateFreshnessProgress = (purchaseDate, expiryDate) => {
   const purchase = new Date(purchaseDate).getTime();
   const expiry = new Date(expiryDate).getTime();
   const now = new Date().getTime();
-  
+
   const totalTime = expiry - purchase;
   const elapsed = now - purchase;
-  const remaining = 1 - (elapsed / totalTime);
-  
+  const remaining = 1 - elapsed / totalTime;
+
   return Math.max(0, Math.min(1, remaining));
 };
 
@@ -56,23 +59,28 @@ export const generateId = () => {
  * Get items expiring soon (within days)
  */
 export const getExpiringItems = (items, withinDays = 3) => {
-  return items.filter(item => {
-    const days = getDaysUntilExpiry(item.expiryDate);
-    return days >= 0 && days <= withinDays;
-  }).sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+  return items
+    .filter(item => {
+      const days = getDaysUntilExpiry(item.expiryDate);
+      return days >= 0 && days <= withinDays;
+    })
+    .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
 };
 
 /**
  * Calculate nutrition totals
  */
-export const calculateNutritionTotals = (meals) => {
-  return meals.reduce((totals, meal) => ({
-    calories: totals.calories + (meal.calories || 0),
-    protein: totals.protein + (meal.protein || 0),
-    carbs: totals.carbs + (meal.carbs || 0),
-    fat: totals.fat + (meal.fat || 0),
-    fiber: totals.fiber + (meal.fiber || 0),
-  }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+export const calculateNutritionTotals = meals => {
+  return meals.reduce(
+    (totals, meal) => ({
+      calories: totals.calories + (meal.calories || 0),
+      protein: totals.protein + (meal.protein || 0),
+      carbs: totals.carbs + (meal.carbs || 0),
+      fat: totals.fat + (meal.fat || 0),
+      fiber: totals.fiber + (meal.fiber || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+  );
 };
 
 /**
@@ -91,17 +99,24 @@ export const getGreeting = () => {
 export const calculateRecipeMatch = (recipeIngredients, fridgeItems) => {
   const fridgeItemNames = fridgeItems.map(item => item.name.toLowerCase());
   const matchedIngredients = recipeIngredients.filter(ingredient =>
-    fridgeItemNames.some(name => name.includes(ingredient.toLowerCase()) || 
-    ingredient.toLowerCase().includes(name))
+    fridgeItemNames.some(
+      name =>
+        name.includes(ingredient.toLowerCase()) ||
+        ingredient.toLowerCase().includes(name),
+    ),
   );
-  return Math.round((matchedIngredients.length / recipeIngredients.length) * 100);
+  return Math.round(
+    (matchedIngredients.length / recipeIngredients.length) * 100,
+  );
 };
 
 /**
  * Sort items by expiry (expiring soon first)
  */
-export const sortByExpiry = (items) => {
-  return [...items].sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+export const sortByExpiry = items => {
+  return [...items].sort(
+    (a, b) => new Date(a.expiryDate) - new Date(b.expiryDate),
+  );
 };
 
 /**

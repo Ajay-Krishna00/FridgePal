@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   StyleSheet,
   Modal,
   Image,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -17,19 +20,31 @@ import {
   selectFilteredRecipes,
   selectSavedRecipes,
   selectTopMatches,
-  saveRecipe,
-  unsaveRecipe,
-  toggleTag,
-  setSearchQuery,
-  setSortBy,
-} from '../../../store/slices/recipeSlice';
-import { selectAllItems } from '../../../store/slices/fridgeSlice';
-import { logMealFromRecipe } from '../../../store/slices/nutritionSlice';
+  selectAiRecipes,
+  selectAiLoading,
+  selectAiError,
+  fetchRecipes,
+  fetchMatchingRecipes,
+  fetchSavedRecipes,
+  saveRecipeAsync,
+  unsaveRecipeAsync,
+  generateAiRecipes,
+  clearAiRecipes,
+} from '../../../store/slices/recipeSliceAsync';
+import { selectAllItems } from '../../../store/slices/fridgeSliceAsync';
+import { logMealFromRecipeAsync } from '../../../store/slices/nutritionSliceAsync';
 
 const RECIPE_TAGS = [
-  'breakfast', 'lunch', 'dinner', 'snack',
-  'quick', 'healthy', 'high-protein', 'low-carb',
-  'vegetarian', 'vegan',
+  'breakfast',
+  'lunch',
+  'dinner',
+  'snack',
+  'quick',
+  'healthy',
+  'high-protein',
+  'low-carb',
+  'vegetarian',
+  'vegan',
 ];
 
 const SORT_OPTIONS = [
@@ -40,84 +55,173 @@ const SORT_OPTIONS = [
 
 const Recipe = () => {
   const dispatch = useDispatch();
-  const recipes = useSelector(selectFilteredRecipes);
-  const savedRecipeIds = useSelector(selectSavedRecipes);
+  const { recipes, savedRecipeIds, loading, error } = useSelector(
+    state => state.recipes,
+  );
   const topMatches = useSelector(selectTopMatches);
   const fridgeItems = useSelector(selectAllItems);
-  
+  const aiRecipes = useSelector(selectAiRecipes);
+  const aiLoading = useSelector(selectAiLoading);
+  const aiError = useSelector(selectAiError);
+
   const [searchQuery, setLocalSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [sortBy, setLocalSortBy] = useState('match');
   const [showRecipeDetail, setShowRecipeDetail] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  
+  const [refreshing, setRefreshing] = useState(false);
+  const [showAiSection, setShowAiSection] = useState(true);
+  const [aiMealType, setAiMealType] = useState(null);
+
+  // Fetch data on mount
+  useEffect(() => {
+    dispatch(fetchRecipes());
+    dispatch(fetchSavedRecipes());
+  }, [dispatch]);
+
+  // Fetch matching recipes when fridge items change
+  useEffect(() => {
+    if (fridgeItems.length > 0) {
+      dispatch(fetchMatchingRecipes());
+    }
+  }, [dispatch, fridgeItems]);
+
+  // Handle pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      dispatch(fetchRecipes()),
+      dispatch(fetchMatchingRecipes()),
+    ]);
+    setRefreshing(false);
+  };
+
+  // Generate AI recipes based on fridge items
+  const handleGenerateAiRecipes = useCallback(
+    (mealType = null) => {
+      if (fridgeItems.length === 0) {
+        Alert.alert(
+          'No Items in Fridge',
+          'Please add some items to your fridge first to get AI recipe suggestions.',
+          [{ text: 'OK' }],
+        );
+        return;
+      }
+
+      setAiMealType(mealType);
+      dispatch(
+        generateAiRecipes({
+          fridgeItems,
+          options: {
+            numberOfRecipes: 5,
+            mealType,
+            dietaryPreferences: [],
+          },
+        }),
+      );
+    },
+    [dispatch, fridgeItems],
+  );
+
+  // Auto-generate AI recipes when fridge items are available
+  useEffect(() => {
+    if (fridgeItems.length > 0 && aiRecipes.length === 0 && !aiLoading) {
+      // Delay to avoid too many initial requests
+      const timer = setTimeout(() => {
+        handleGenerateAiRecipes();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [fridgeItems.length]);
+
   const filteredRecipes = useMemo(() => {
     let filtered = recipes;
-    
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r =>
-        r.name.toLowerCase().includes(query) ||
-        r.description.toLowerCase().includes(query) ||
-        r.ingredients.some(i => i.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        r =>
+          r.name.toLowerCase().includes(query) ||
+          r.description.toLowerCase().includes(query) ||
+          r.ingredients.some(i => i.toLowerCase().includes(query)),
       );
     }
-    
+
     if (selectedTags.length > 0) {
       filtered = filtered.filter(r =>
-        selectedTags.some(tag => r.tags.includes(tag))
+        selectedTags.some(tag => r.tags.includes(tag)),
       );
     }
-    
+
     switch (sortBy) {
       case 'match':
-        filtered = [...filtered].sort((a, b) => b.matchPercentage - a.matchPercentage);
+        filtered = [...filtered].sort(
+          (a, b) => (b.matchPercentage || 0) - (a.matchPercentage || 0),
+        );
         break;
       case 'time':
-        filtered = [...filtered].sort((a, b) => 
-          (a.prepTime + a.cookTime) - (b.prepTime + b.cookTime)
+        filtered = [...filtered].sort(
+          (a, b) => a.prepTime + a.cookTime - (b.prepTime + b.cookTime),
         );
         break;
       case 'calories':
         filtered = [...filtered].sort((a, b) => a.calories - b.calories);
         break;
     }
-    
+
     return filtered;
   }, [recipes, searchQuery, selectedTags, sortBy]);
-  
-  const handleSaveRecipe = (recipeId) => {
+
+  const handleSaveRecipe = recipeId => {
     if (savedRecipeIds.includes(recipeId)) {
-      dispatch(unsaveRecipe(recipeId));
+      dispatch(unsaveRecipeAsync(recipeId));
     } else {
-      dispatch(saveRecipe(recipeId));
+      dispatch(saveRecipeAsync(recipeId));
     }
   };
-  
-  const handleToggleTag = (tag) => {
+
+  const handleToggleTag = tag => {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter(t => t !== tag));
     } else {
       setSelectedTags([...selectedTags, tag]);
     }
   };
-  
+
   const handleLogMeal = (recipe, mealType) => {
-    dispatch(logMealFromRecipe({ recipe, mealType, servings: 1 }));
+    dispatch(logMealFromRecipeAsync({ recipe, mealType, servings: 1 }));
     setShowRecipeDetail(null);
   };
-  
+
   const RecipeDetailModal = ({ recipe, visible, onClose }) => {
     if (!recipe) return null;
-    
+
     const isSaved = savedRecipeIds.includes(recipe.id);
-    const matchedIngredients = recipe.ingredients.filter(ing =>
-      fridgeItems.some(item => 
-        item.name.toLowerCase().includes(ing.toLowerCase()) ||
-        ing.toLowerCase().includes(item.name.toLowerCase())
-      )
-    );
-    
+
+    // Helper to get ingredient name string from either string or object format
+    const getIngredientName = ing => {
+      if (typeof ing === 'string') return ing;
+      if (typeof ing === 'object' && ing !== null) {
+        // Handle {name, unit, amount} format from AI
+        const { name, amount, unit } = ing;
+        if (amount && unit) return `${amount} ${unit} ${name}`;
+        if (amount) return `${amount} ${name}`;
+        return name || '';
+      }
+      return '';
+    };
+
+    const matchedIngredients = (recipe.ingredients || []).filter(ing => {
+      // Handle both string ingredients and object ingredients
+      const ingName = typeof ing === 'string' ? ing : ing?.name || '';
+      if (!ingName) return false;
+      return fridgeItems.some(
+        item =>
+          item.name?.toLowerCase().includes(ingName.toLowerCase()) ||
+          ingName.toLowerCase().includes(item.name?.toLowerCase() || ''),
+      );
+    });
+
     return (
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View style={styles.modalContainer}>
@@ -129,33 +233,37 @@ const Recipe = () => {
                 <TouchableOpacity style={styles.backBtn} onPress={onClose}>
                   <Icon name="arrow-left" size={24} color="#FFF" />
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.heroSaveBtn}
                   onPress={() => handleSaveRecipe(recipe.id)}
                 >
-                  <Icon 
-                    name={isSaved ? 'heart' : 'heart-outline'} 
-                    size={24} 
-                    color={isSaved ? COLORS.danger : '#FFF'} 
+                  <Icon
+                    name={isSaved ? 'heart' : 'heart-outline'}
+                    size={24}
+                    color={isSaved ? COLORS.danger : '#FFF'}
                   />
                 </TouchableOpacity>
               </View>
               <View style={styles.matchBadgeLarge}>
                 <Icon name="check-circle" size={20} color="#FFF" />
-                <Text style={styles.matchTextLarge}>{recipe.matchPercentage}% Match</Text>
+                <Text style={styles.matchTextLarge}>
+                  {recipe.matchPercentage}% Match
+                </Text>
               </View>
             </View>
-            
+
             {/* Content */}
             <View style={styles.modalContent}>
               <Text style={styles.recipeTitle}>{recipe.name}</Text>
               <Text style={styles.recipeDescription}>{recipe.description}</Text>
-              
+
               {/* Meta Info */}
               <View style={styles.metaContainer}>
                 <View style={styles.metaBox}>
                   <Icon name="clock-outline" size={22} color={COLORS.primary} />
-                  <Text style={styles.metaValue}>{recipe.prepTime + recipe.cookTime}</Text>
+                  <Text style={styles.metaValue}>
+                    {recipe.prepTime + recipe.cookTime}
+                  </Text>
                   <Text style={styles.metaLabel}>minutes</Text>
                 </View>
                 <View style={styles.metaBox}>
@@ -164,17 +272,25 @@ const Recipe = () => {
                   <Text style={styles.metaLabel}>calories</Text>
                 </View>
                 <View style={styles.metaBox}>
-                  <Icon name="account-group-outline" size={22} color={COLORS.secondary} />
+                  <Icon
+                    name="account-group-outline"
+                    size={22}
+                    color={COLORS.secondary}
+                  />
                   <Text style={styles.metaValue}>{recipe.servings}</Text>
                   <Text style={styles.metaLabel}>servings</Text>
                 </View>
                 <View style={styles.metaBox}>
-                  <Icon name="chef-hat" size={22} color={COLORS.textSecondary} />
+                  <Icon
+                    name="chef-hat"
+                    size={22}
+                    color={COLORS.textSecondary}
+                  />
                   <Text style={styles.metaValue}>{recipe.difficulty}</Text>
                   <Text style={styles.metaLabel}>level</Text>
                 </View>
               </View>
-              
+
               {/* Nutrition */}
               <View style={styles.nutritionContainer}>
                 <Text style={styles.sectionTitle}>Nutrition per serving</Text>
@@ -193,28 +309,39 @@ const Recipe = () => {
                   </View>
                 </View>
               </View>
-              
+
               {/* Ingredients */}
               <View style={styles.ingredientsContainer}>
                 <Text style={styles.sectionTitle}>Ingredients</Text>
                 <Text style={styles.ingredientNote}>
-                  <Icon name="fridge" size={14} color={COLORS.secondary} />
-                  {' '}{matchedIngredients.length} of {recipe.ingredients.length} in your fridge
+                  <Icon name="fridge" size={14} color={COLORS.secondary} />{' '}
+                  {matchedIngredients.length} of {recipe.ingredients.length} in
+                  your fridge
                 </Text>
                 {recipe.ingredients.map((ingredient, index) => {
-                  const inFridge = matchedIngredients.includes(ingredient);
+                  const ingredientText = getIngredientName(ingredient);
+                  const ingNameOnly =
+                    typeof ingredient === 'string'
+                      ? ingredient
+                      : ingredient?.name || '';
+                  const inFridge = matchedIngredients.some(mi => {
+                    const miName = typeof mi === 'string' ? mi : mi?.name || '';
+                    return miName.toLowerCase() === ingNameOnly.toLowerCase();
+                  });
                   return (
                     <View key={index} style={styles.ingredientRow}>
-                      <Icon 
-                        name={inFridge ? 'check-circle' : 'circle-outline'} 
-                        size={20} 
-                        color={inFridge ? COLORS.secondary : COLORS.textLight} 
+                      <Icon
+                        name={inFridge ? 'check-circle' : 'circle-outline'}
+                        size={20}
+                        color={inFridge ? COLORS.secondary : COLORS.textLight}
                       />
-                      <Text style={[
-                        styles.ingredientText,
-                        inFridge && styles.ingredientInFridge
-                      ]}>
-                        {ingredient}
+                      <Text
+                        style={[
+                          styles.ingredientText,
+                          inFridge && styles.ingredientInFridge,
+                        ]}
+                      >
+                        {ingredientText}
                       </Text>
                       {inFridge && (
                         <Text style={styles.inFridgeTag}>In fridge</Text>
@@ -223,34 +350,44 @@ const Recipe = () => {
                   );
                 })}
               </View>
-              
+
               {/* Instructions */}
               <View style={styles.instructionsContainer}>
                 <Text style={styles.sectionTitle}>Instructions</Text>
-                {recipe.instructions.map((step, index) => (
-                  <View key={index} style={styles.stepRow}>
-                    <View style={styles.stepNumber}>
-                      <Text style={styles.stepNumberText}>{index + 1}</Text>
+                {(recipe.instructions || []).map((step, index) => {
+                  const stepText =
+                    typeof step === 'string'
+                      ? step
+                      : step?.text || step?.instruction || JSON.stringify(step);
+                  return (
+                    <View key={index} style={styles.stepRow}>
+                      <View style={styles.stepNumber}>
+                        <Text style={styles.stepNumberText}>{index + 1}</Text>
+                      </View>
+                      <Text style={styles.stepText}>{stepText}</Text>
                     </View>
-                    <Text style={styles.stepText}>{step}</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
-              
+
               {/* Tags */}
               <View style={styles.tagsContainer}>
-                {recipe.tags.map((tag, index) => (
-                  <View key={index} style={styles.detailTag}>
-                    <Text style={styles.detailTagText}>{tag}</Text>
-                  </View>
-                ))}
+                {(recipe.tags || []).map((tag, index) => {
+                  const tagText =
+                    typeof tag === 'string' ? tag : tag?.name || '';
+                  return (
+                    <View key={index} style={styles.detailTag}>
+                      <Text style={styles.detailTagText}>{tagText}</Text>
+                    </View>
+                  );
+                })}
               </View>
             </View>
           </ScrollView>
-          
+
           {/* Bottom Action */}
           <View style={styles.bottomAction}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.logMealBtn}
               onPress={() => handleLogMeal(recipe, 'dinner')}
             >
@@ -262,7 +399,7 @@ const Recipe = () => {
       </Modal>
     );
   };
-  
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -276,7 +413,7 @@ const Recipe = () => {
           <Text style={styles.headerStatsText}>{fridgeItems.length} items</Text>
         </View>
       </View>
-      
+
       {/* Search & Filter */}
       <View style={styles.searchRow}>
         <View style={styles.searchContainer}>
@@ -289,25 +426,25 @@ const Recipe = () => {
             onChangeText={setLocalSearchQuery}
           />
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.filterBtn, showFilters && styles.filterBtnActive]}
           onPress={() => setShowFilters(!showFilters)}
         >
-          <Icon 
-            name="tune-variant" 
-            size={22} 
-            color={showFilters ? '#FFF' : COLORS.text} 
+          <Icon
+            name="tune-variant"
+            size={22}
+            color={showFilters ? '#FFF' : COLORS.text}
           />
         </TouchableOpacity>
       </View>
-      
+
       {/* Filters Panel */}
       {showFilters && (
         <View style={styles.filtersPanel}>
           {/* Sort Options */}
           <Text style={styles.filterLabel}>Sort by</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {SORT_OPTIONS.map((option) => (
+            {SORT_OPTIONS.map(option => (
               <TouchableOpacity
                 key={option.id}
                 style={[
@@ -316,25 +453,27 @@ const Recipe = () => {
                 ]}
                 onPress={() => setLocalSortBy(option.id)}
               >
-                <Icon 
-                  name={option.icon} 
-                  size={16} 
-                  color={sortBy === option.id ? '#FFF' : COLORS.textSecondary} 
+                <Icon
+                  name={option.icon}
+                  size={16}
+                  color={sortBy === option.id ? '#FFF' : COLORS.textSecondary}
                 />
-                <Text style={[
-                  styles.sortChipText,
-                  sortBy === option.id && styles.sortChipTextActive,
-                ]}>
+                <Text
+                  style={[
+                    styles.sortChipText,
+                    sortBy === option.id && styles.sortChipTextActive,
+                  ]}
+                >
                   {option.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
-          
+
           {/* Tags */}
           <Text style={[styles.filterLabel, { marginTop: 12 }]}>Filter by</Text>
           <View style={styles.tagsRow}>
-            {RECIPE_TAGS.map((tag) => (
+            {RECIPE_TAGS.map(tag => (
               <TouchableOpacity
                 key={tag}
                 style={[
@@ -343,10 +482,12 @@ const Recipe = () => {
                 ]}
                 onPress={() => handleToggleTag(tag)}
               >
-                <Text style={[
-                  styles.tagChipText,
-                  selectedTags.includes(tag) && styles.tagChipTextActive,
-                ]}>
+                <Text
+                  style={[
+                    styles.tagChipText,
+                    selectedTags.includes(tag) && styles.tagChipTextActive,
+                  ]}
+                >
                   {tag}
                 </Text>
               </TouchableOpacity>
@@ -354,8 +495,8 @@ const Recipe = () => {
           </View>
         </View>
       )}
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -368,7 +509,7 @@ const Recipe = () => {
               <Text style={styles.sectionSubtitle}>Based on your fridge</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {topMatches.map((recipe) => (
+              {topMatches.map(recipe => (
                 <RecipeCard
                   key={recipe.id}
                   recipe={recipe}
@@ -379,27 +520,126 @@ const Recipe = () => {
             </ScrollView>
           </View>
         )}
-        
+
         {/* AI Suggestions Banner */}
-        <View style={styles.aiBanner}>
+        <TouchableOpacity
+          style={styles.aiBanner}
+          onPress={() => handleGenerateAiRecipes()}
+          disabled={aiLoading}
+        >
           <View style={styles.aiIconContainer}>
-            <Icon name="robot-outline" size={32} color={COLORS.primary} />
+            {aiLoading ? (
+              <ActivityIndicator size="small" color={COLORS.primary} />
+            ) : (
+              <Icon name="robot-outline" size={32} color={COLORS.primary} />
+            )}
           </View>
           <View style={styles.aiBannerContent}>
-            <Text style={styles.aiBannerTitle}>AI-Powered Suggestions</Text>
+            <Text style={styles.aiBannerTitle}>
+              {aiLoading
+                ? 'Generating Recipes...'
+                : '✨ AI-Powered Suggestions'}
+            </Text>
             <Text style={styles.aiBannerText}>
-              Recipes ranked by ingredients in your fridge
+              {aiLoading
+                ? 'Analyzing your fridge items...'
+                : 'Tap to generate recipes from your fridge items'}
             </Text>
           </View>
-          <Icon name="sparkles" size={24} color={COLORS.accent} />
+          <Icon
+            name={aiLoading ? 'loading' : 'refresh'}
+            size={24}
+            color={COLORS.accent}
+          />
+        </TouchableOpacity>
+
+        {/* AI Meal Type Quick Filters */}
+        <View style={styles.aiQuickFilters}>
+          {['breakfast', 'lunch', 'dinner', 'snack'].map(type => (
+            <TouchableOpacity
+              key={type}
+              style={[
+                styles.aiQuickFilterBtn,
+                aiMealType === type && styles.aiQuickFilterBtnActive,
+              ]}
+              onPress={() => handleGenerateAiRecipes(type)}
+              disabled={aiLoading}
+            >
+              <Icon
+                name={
+                  type === 'breakfast'
+                    ? 'food-croissant'
+                    : type === 'lunch'
+                    ? 'food'
+                    : type === 'dinner'
+                    ? 'silverware-fork-knife'
+                    : 'cookie'
+                }
+                size={16}
+                color={aiMealType === type ? '#FFF' : COLORS.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.aiQuickFilterText,
+                  aiMealType === type && styles.aiQuickFilterTextActive,
+                ]}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-        
+
+        {/* AI Error Message */}
+        {aiError && (
+          <View style={styles.aiErrorContainer}>
+            <Icon name="alert-circle-outline" size={20} color={COLORS.danger} />
+            <Text style={styles.aiErrorText}>{aiError}</Text>
+            <TouchableOpacity
+              onPress={() => handleGenerateAiRecipes(aiMealType)}
+            >
+              <Text style={styles.aiRetryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* AI Generated Recipes Section */}
+        {aiRecipes.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.aiSectionTitleRow}>
+                <Icon name="auto-fix" size={22} color={COLORS.accent} />
+                <Text style={styles.sectionTitle}>AI Generated Recipes</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>
+                {aiRecipes.length} recipes created from your{' '}
+                {fridgeItems.length} fridge items
+              </Text>
+            </View>
+            {aiRecipes.map(recipe => (
+              <RecipeCard
+                key={recipe.id}
+                recipe={{
+                  ...recipe,
+                  isAiGenerated: true,
+                }}
+                isSaved={savedRecipeIds.includes(recipe.id)}
+                onPress={() => setShowRecipeDetail(recipe)}
+                onSave={handleSaveRecipe}
+                showAiBadge
+              />
+            ))}
+          </View>
+        )}
+
         {/* All Recipes */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>All Recipes</Text>
-          <Text style={styles.resultCount}>{filteredRecipes.length} recipes found</Text>
-          
-          {filteredRecipes.map((recipe) => (
+          <Text style={styles.resultCount}>
+            {filteredRecipes.length} recipes found
+          </Text>
+
+          {filteredRecipes.map(recipe => (
             <RecipeCard
               key={recipe.id}
               recipe={recipe}
@@ -409,10 +649,10 @@ const Recipe = () => {
             />
           ))}
         </View>
-        
+
         <View style={{ height: 100 }} />
       </ScrollView>
-      
+
       {/* Recipe Detail Modal */}
       <RecipeDetailModal
         recipe={showRecipeDetail}
@@ -435,7 +675,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#E8F5E9',
   },
   headerSubtitle: {
     fontSize: 14,
@@ -605,6 +845,58 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     marginTop: 2,
+  },
+  aiQuickFilters: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 8,
+  },
+  aiQuickFilterBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    gap: 4,
+  },
+  aiQuickFilterBtnActive: {
+    backgroundColor: COLORS.accent,
+  },
+  aiQuickFilterText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+  },
+  aiQuickFilterTextActive: {
+    color: '#FFF',
+  },
+  aiErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.danger + '15',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  aiErrorText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.danger,
+  },
+  aiRetryText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  aiSectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   // Modal styles
   modalContainer: {

@@ -5,9 +5,18 @@ const sampleRecipes = [
   {
     id: '1',
     name: 'Spinach & Cheese Omelette',
-    description: 'A protein-packed breakfast with fresh spinach and melted cheese',
-    image: 'https://images.unsplash.com/photo-1510693206972-df098062cb71?w=400&h=300&fit=crop',
-    ingredients: ['eggs', 'spinach', 'cheddar cheese', 'butter', 'salt', 'pepper'],
+    description:
+      'A protein-packed breakfast with fresh spinach and melted cheese',
+    image:
+      'https://images.unsplash.com/photo-1510693206972-df098062cb71?w=400&h=300&fit=crop',
+    ingredients: [
+      'eggs',
+      'spinach',
+      'cheddar cheese',
+      'butter',
+      'salt',
+      'pepper',
+    ],
     instructions: [
       'Beat 3 eggs in a bowl with salt and pepper',
       'Heat butter in a non-stick pan over medium heat',
@@ -30,9 +39,18 @@ const sampleRecipes = [
   {
     id: '2',
     name: 'Grilled Chicken Salad',
-    description: 'Fresh and healthy salad with grilled chicken breast and vegetables',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop',
-    ingredients: ['chicken breast', 'spinach', 'tomatoes', 'bell peppers', 'olive oil', 'lemon'],
+    description:
+      'Fresh and healthy salad with grilled chicken breast and vegetables',
+    image:
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop',
+    ingredients: [
+      'chicken breast',
+      'spinach',
+      'tomatoes',
+      'bell peppers',
+      'olive oil',
+      'lemon',
+    ],
     instructions: [
       'Season chicken with salt, pepper, and olive oil',
       'Grill chicken for 6-7 minutes each side',
@@ -56,7 +74,8 @@ const sampleRecipes = [
     id: '3',
     name: 'Creamy Tomato Pasta',
     description: 'Rich and creamy pasta with fresh tomatoes and herbs',
-    image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop',
     ingredients: ['pasta', 'tomatoes', 'cream', 'garlic', 'basil', 'parmesan'],
     instructions: [
       'Cook pasta according to package directions',
@@ -81,7 +100,8 @@ const sampleRecipes = [
     id: '4',
     name: 'Greek Yogurt Parfait',
     description: 'Healthy breakfast parfait with yogurt, fruits, and granola',
-    image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=300&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=300&fit=crop',
     ingredients: ['greek yogurt', 'honey', 'granola', 'berries', 'banana'],
     instructions: [
       'Layer yogurt in a glass or bowl',
@@ -105,9 +125,18 @@ const sampleRecipes = [
   {
     id: '5',
     name: 'Stuffed Bell Peppers',
-    description: 'Colorful bell peppers stuffed with savory meat and rice filling',
-    image: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400&h=300&fit=crop',
-    ingredients: ['bell peppers', 'ground beef', 'rice', 'tomatoes', 'cheese', 'onion'],
+    description:
+      'Colorful bell peppers stuffed with savory meat and rice filling',
+    image:
+      'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400&h=300&fit=crop',
+    ingredients: [
+      'bell peppers',
+      'ground beef',
+      'rice',
+      'tomatoes',
+      'cheese',
+      'onion',
+    ],
     instructions: [
       'Cut tops off peppers and remove seeds',
       'Cook rice according to package',
@@ -131,9 +160,18 @@ const sampleRecipes = [
   {
     id: '6',
     name: 'Avocado Toast with Eggs',
-    description: 'Trendy and nutritious breakfast with creamy avocado and poached eggs',
-    image: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&h=300&fit=crop',
-    ingredients: ['bread', 'avocado', 'eggs', 'lemon', 'red pepper flakes', 'salt'],
+    description:
+      'Trendy and nutritious breakfast with creamy avocado and poached eggs',
+    image:
+      'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&h=300&fit=crop',
+    ingredients: [
+      'bread',
+      'avocado',
+      'eggs',
+      'lemon',
+      'red pepper flakes',
+      'salt',
+    ],
     instructions: [
       'Toast bread until golden',
       'Mash avocado with lemon juice and salt',
@@ -156,9 +194,18 @@ const sampleRecipes = [
   {
     id: '7',
     name: 'Chicken Stir Fry',
-    description: 'Quick Asian-inspired stir fry with chicken and colorful vegetables',
-    image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
-    ingredients: ['chicken breast', 'bell peppers', 'broccoli', 'soy sauce', 'ginger', 'garlic'],
+    description:
+      'Quick Asian-inspired stir fry with chicken and colorful vegetables',
+    image:
+      'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
+    ingredients: [
+      'chicken breast',
+      'bell peppers',
+      'broccoli',
+      'soy sauce',
+      'ginger',
+      'garlic',
+    ],
     instructions: [
       'Slice chicken into thin strips',
       'Cut vegetables into bite-sized pieces',
@@ -182,9 +229,17 @@ const sampleRecipes = [
   {
     id: '8',
     name: 'Caprese Salad',
-    description: 'Classic Italian salad with fresh mozzarella, tomatoes, and basil',
-    image: 'https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=400&h=300&fit=crop',
-    ingredients: ['tomatoes', 'mozzarella', 'basil', 'olive oil', 'balsamic vinegar'],
+    description:
+      'Classic Italian salad with fresh mozzarella, tomatoes, and basil',
+    image:
+      'https://images.unsplash.com/photo-1608897013039-887f21d8c804?w=400&h=300&fit=crop',
+    ingredients: [
+      'tomatoes',
+      'mozzarella',
+      'basil',
+      'olive oil',
+      'balsamic vinegar',
+    ],
     instructions: [
       'Slice tomatoes and mozzarella',
       'Arrange alternating on plate',
@@ -226,7 +281,9 @@ const recipeSlice = createSlice({
       }
     },
     unsaveRecipe: (state, action) => {
-      state.savedRecipes = state.savedRecipes.filter(id => id !== action.payload);
+      state.savedRecipes = state.savedRecipes.filter(
+        id => id !== action.payload,
+      );
     },
     setSelectedTags: (state, action) => {
       state.selectedTags = action.payload;
@@ -267,36 +324,41 @@ export const {
 } = recipeSlice.actions;
 
 // Selectors
-export const selectAllRecipes = (state) => state.recipes.recipes;
-export const selectSavedRecipes = (state) => state.recipes.savedRecipes;
+export const selectAllRecipes = state => state.recipes.recipes;
+export const selectSavedRecipes = state => state.recipes.savedRecipes;
 
-export const selectFilteredRecipes = (state) => {
+export const selectFilteredRecipes = state => {
   let recipes = state.recipes.recipes;
-  
+
   // Filter by tags
   if (state.recipes.selectedTags.length > 0) {
     recipes = recipes.filter(recipe =>
-      state.recipes.selectedTags.some(tag => recipe.tags.includes(tag))
+      state.recipes.selectedTags.some(tag => recipe.tags.includes(tag)),
     );
   }
-  
+
   // Filter by search
   if (state.recipes.searchQuery) {
     const query = state.recipes.searchQuery.toLowerCase();
-    recipes = recipes.filter(recipe =>
-      recipe.name.toLowerCase().includes(query) ||
-      recipe.description.toLowerCase().includes(query) ||
-      recipe.ingredients.some(ing => ing.toLowerCase().includes(query))
+    recipes = recipes.filter(
+      recipe =>
+        recipe.name.toLowerCase().includes(query) ||
+        recipe.description.toLowerCase().includes(query) ||
+        recipe.ingredients.some(ing => ing.toLowerCase().includes(query)),
     );
   }
-  
+
   // Sort
   switch (state.recipes.sortBy) {
     case 'match':
-      recipes = [...recipes].sort((a, b) => b.matchPercentage - a.matchPercentage);
+      recipes = [...recipes].sort(
+        (a, b) => b.matchPercentage - a.matchPercentage,
+      );
       break;
     case 'time':
-      recipes = [...recipes].sort((a, b) => (a.prepTime + a.cookTime) - (b.prepTime + b.cookTime));
+      recipes = [...recipes].sort(
+        (a, b) => a.prepTime + a.cookTime - (b.prepTime + b.cookTime),
+      );
       break;
     case 'calories':
       recipes = [...recipes].sort((a, b) => a.calories - b.calories);
@@ -304,11 +366,11 @@ export const selectFilteredRecipes = (state) => {
     default:
       break;
   }
-  
+
   return recipes;
 };
 
-export const selectTopMatches = (state) => {
+export const selectTopMatches = state => {
   return [...state.recipes.recipes]
     .sort((a, b) => b.matchPercentage - a.matchPercentage)
     .slice(0, 5);

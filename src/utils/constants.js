@@ -7,7 +7,7 @@ export const COLORS = {
   danger: '#EF4444',
   warning: '#F97316',
   success: '#22C55E',
-  
+
   // Neutrals
   background: '#F5F7FA',
   surface: '#FFFFFF',
@@ -15,7 +15,7 @@ export const COLORS = {
   textSecondary: '#6B7280',
   textLight: '#9CA3AF',
   border: '#E5E7EB',
-  
+
   // Freshness colors
   fresh: '#22C55E',
   moderate: '#F59E0B',

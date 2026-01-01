@@ -4,27 +4,38 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '../utils/constants';
 import { getFreshnessStatus, formatDate } from '../utils/helpers';
 
-const FridgeItemCard = ({ item, onPress, onUpdateAmount, compact = false }) => {
+const FridgeItemCard = ({
+  item,
+  onDelete,
+  onUpdateAmount,
+  compact = false,
+}) => {
   const freshness = getFreshnessStatus(item.expiryDate);
-  
+
   if (compact) {
     return (
-      <TouchableOpacity style={styles.compactCard} onPress={onPress}>
-        <Image source={{ uri: item.image }} style={styles.compactImage} />
+      <View style={styles.compactCard}>
         <View style={styles.compactInfo}>
-          <Text style={styles.compactName} numberOfLines={1}>{item.name}</Text>
-          <View style={[styles.freshnessTag, { backgroundColor: freshness.color + '20' }]}>
+          <Text style={styles.compactName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <View
+            style={[
+              styles.freshnessTag,
+              { backgroundColor: freshness.color + '20' },
+            ]}
+          >
             <Text style={[styles.freshnessText, { color: freshness.color }]}>
               {freshness.label}
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   }
-  
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Image source={{ uri: item.image }} style={styles.itemImage} />
         <View style={styles.itemInfo}>
@@ -38,16 +49,27 @@ const FridgeItemCard = ({ item, onPress, onUpdateAmount, compact = false }) => {
           </View>
         </View>
         <View style={styles.rightSection}>
-          <View style={[styles.freshnessIndicator, { backgroundColor: freshness.color }]}>
-            <Icon 
-              name={freshness.status === 'expired' ? 'alert' : 'clock-outline'} 
-              size={14} 
-              color="#FFF" 
+          <View
+            style={[
+              styles.freshnessIndicator,
+              { backgroundColor: freshness.color },
+            ]}
+          >
+            <Icon
+              name={freshness.status === 'expired' ? 'alert' : 'clock-outline'}
+              size={14}
+              color="#FFF"
             />
           </View>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => onDelete?.(item.id)}
+          >
+            <Icon name="trash-can-outline" size={18} color={COLORS.danger} />
+          </TouchableOpacity>
         </View>
       </View>
-      
+
       <View style={styles.progressSection}>
         {/* Amount Left */}
         <View style={styles.progressRow}>
@@ -57,20 +79,22 @@ const FridgeItemCard = ({ item, onPress, onUpdateAmount, compact = false }) => {
           </View>
           <View style={styles.progressBarContainer}>
             <View style={styles.progressBarBg}>
-              <View 
+              <View
                 style={[
-                  styles.progressBarFill, 
-                  { 
+                  styles.progressBarFill,
+                  {
                     width: `${item.amountLeft * 100}%`,
-                    backgroundColor: COLORS.primary 
-                  }
-                ]} 
+                    backgroundColor: COLORS.primary,
+                  },
+                ]}
               />
             </View>
-            <Text style={styles.progressValue}>{Math.round(item.amountLeft * 100)}%</Text>
+            <Text style={styles.progressValue}>
+              {Math.round(item.amountLeft * 100)}%
+            </Text>
           </View>
         </View>
-        
+
         {/* Freshness */}
         <View style={styles.progressRow}>
           <View style={styles.progressLabelRow}>
@@ -79,14 +103,22 @@ const FridgeItemCard = ({ item, onPress, onUpdateAmount, compact = false }) => {
           </View>
           <View style={styles.progressBarContainer}>
             <View style={styles.progressBarBg}>
-              <View 
+              <View
                 style={[
-                  styles.progressBarFill, 
-                  { 
-                    width: `${Math.max(0, (1 - (new Date() - new Date(item.purchaseDate)) / (new Date(item.expiryDate) - new Date(item.purchaseDate)))) * 100}%`,
-                    backgroundColor: freshness.color 
-                  }
-                ]} 
+                  styles.progressBarFill,
+                  {
+                    width: `${
+                      Math.max(
+                        0,
+                        1 -
+                          (new Date() - new Date(item.purchaseDate)) /
+                            (new Date(item.expiryDate) -
+                              new Date(item.purchaseDate)),
+                      ) * 100
+                    }%`,
+                    backgroundColor: freshness.color,
+                  },
+                ]}
               />
             </View>
             <Text style={[styles.progressValue, { color: freshness.color }]}>
@@ -95,20 +127,22 @@ const FridgeItemCard = ({ item, onPress, onUpdateAmount, compact = false }) => {
           </View>
         </View>
       </View>
-      
+
       <View style={styles.cardFooter}>
         <View style={styles.dateInfo}>
           <Icon name="calendar" size={14} color={COLORS.textSecondary} />
-          <Text style={styles.dateText}>Expires: {formatDate(item.expiryDate)}</Text>
+          <Text style={styles.dateText}>
+            Expires: {formatDate(item.expiryDate)}
+          </Text>
         </View>
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => onUpdateAmount?.(item.id, -0.25)}
           >
             <Icon name="minus" size={16} color={COLORS.primary} />
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.actionBtn, styles.actionBtnPrimary]}
             onPress={() => onUpdateAmount?.(item.id, 0.25)}
           >
@@ -116,7 +150,7 @@ const FridgeItemCard = ({ item, onPress, onUpdateAmount, compact = false }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -124,8 +158,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 10,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -135,7 +169,7 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   itemImage: {
     width: 60,
@@ -151,12 +185,12 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   itemQuantity: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   categoryRow: {
     flexDirection: 'row',
@@ -170,6 +204,12 @@ const styles = StyleSheet.create({
   },
   rightSection: {
     alignItems: 'flex-end',
+    gap: 8,
+  },
+  deleteBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: COLORS.danger + '15',
   },
   freshnessIndicator: {
     width: 28,
@@ -179,8 +219,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   progressSection: {
-    gap: 12,
-    marginBottom: 12,
+    gap: 10,
+    marginBottom: 10,
   },
   progressRow: {
     gap: 6,
@@ -253,8 +293,9 @@ const styles = StyleSheet.create({
   compactCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 12,
-    padding: 10,
+    padding: 8,
     marginRight: 12,
+    marginBottom: 2,
     width: 120,
     alignItems: 'center',
     elevation: 2,
@@ -262,12 +303,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-  },
-  compactImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    marginBottom: 8,
   },
   compactInfo: {
     alignItems: 'center',

@@ -6,7 +6,8 @@ const userSlice = createSlice({
     profile: {
       name: 'Alex Johnson',
       email: 'alex@example.com',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop',
+      avatar:
+        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop',
       age: 28,
       height: 175, // cm
       weight: 70, // kg
@@ -40,7 +41,12 @@ const userSlice = createSlice({
     },
     achievements: [
       { id: 'first_scan', name: 'First Scan', icon: 'camera', unlocked: true },
-      { id: 'zero_waste', name: 'Zero Waste Week', icon: 'leaf', unlocked: true },
+      {
+        id: 'zero_waste',
+        name: 'Zero Waste Week',
+        icon: 'leaf',
+        unlocked: true,
+      },
       { id: 'chef', name: 'Master Chef', icon: 'chef-hat', unlocked: false },
       { id: 'healthy', name: 'Health Streak', icon: 'heart', unlocked: true },
     ],
@@ -66,7 +72,7 @@ const userSlice = createSlice({
     },
     removeAllergy: (state, action) => {
       state.preferences.allergies = state.preferences.allergies.filter(
-        a => a !== action.payload
+        a => a !== action.payload,
       );
     },
     addDislikedFood: (state, action) => {
@@ -76,10 +82,10 @@ const userSlice = createSlice({
     },
     removeDislikedFood: (state, action) => {
       state.preferences.dislikedFoods = state.preferences.dislikedFoods.filter(
-        f => f !== action.payload
+        f => f !== action.payload,
       );
     },
-    toggleDarkMode: (state) => {
+    toggleDarkMode: state => {
       state.settings.darkMode = !state.settings.darkMode;
     },
     setDietType: (state, action) => {
@@ -97,10 +103,10 @@ const userSlice = createSlice({
     updateStats: (state, action) => {
       state.stats = { ...state.stats, ...action.payload };
     },
-    logout: (state) => {
+    logout: state => {
       state.isAuthenticated = false;
     },
-    login: (state) => {
+    login: state => {
       state.isAuthenticated = true;
     },
   },
@@ -125,28 +131,28 @@ export const {
 } = userSlice.actions;
 
 // Selectors
-export const selectProfile = (state) => state.user.profile;
-export const selectPreferences = (state) => state.user.preferences;
-export const selectNotifications = (state) => state.user.notifications;
-export const selectSettings = (state) => state.user.settings;
-export const selectStats = (state) => state.user.stats;
-export const selectAchievements = (state) => state.user.achievements;
-export const selectIsAuthenticated = (state) => state.user.isAuthenticated;
+export const selectProfile = state => state.user.profile;
+export const selectPreferences = state => state.user.preferences;
+export const selectNotifications = state => state.user.notifications;
+export const selectSettings = state => state.user.settings;
+export const selectStats = state => state.user.stats;
+export const selectAchievements = state => state.user.achievements;
+export const selectIsAuthenticated = state => state.user.isAuthenticated;
 
-export const selectBMI = (state) => {
+export const selectBMI = state => {
   const { height, weight } = state.user.profile;
   if (!height || !weight) return null;
   const heightInM = height / 100;
   return (weight / (heightInM * heightInM)).toFixed(1);
 };
 
-export const selectDailyCalorieGoal = (state) => {
+export const selectDailyCalorieGoal = state => {
   const { age, height, weight, activityLevel } = state.user.profile;
   const { healthGoal } = state.user.preferences;
-  
+
   // Basic BMR calculation (Mifflin-St Jeor)
   let bmr = 10 * weight + 6.25 * height - 5 * age + 5;
-  
+
   // Activity multiplier
   const multipliers = {
     sedentary: 1.2,
@@ -155,9 +161,9 @@ export const selectDailyCalorieGoal = (state) => {
     active: 1.725,
     very_active: 1.9,
   };
-  
+
   let tdee = bmr * (multipliers[activityLevel] || 1.55);
-  
+
   // Adjust for goal
   switch (healthGoal) {
     case 'lose':
@@ -169,7 +175,7 @@ export const selectDailyCalorieGoal = (state) => {
     default:
       break;
   }
-  
+
   return Math.round(tdee);
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,35 +7,37 @@ import {
   StyleSheet,
   Modal,
   TextInput,
+  ActivityIndicator,
+  RefreshControl,
+  Platform,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Svg, { Circle } from 'react-native-svg';
 import { COLORS, MEAL_TYPES } from '../../utils/constants';
 import { NutritionProgress } from '../../components/ProgressComponents';
 import {
-  selectMealsByDate,
-  selectDailyTotals,
-  selectDailyGoals,
-  selectWaterIntake,
-  selectDailyProgress,
   selectMealsByType,
-  selectSelectedDate,
+  selectDailyProgress,
+  selectRemainingCalories,
   setSelectedDate,
-  addMeal,
-  deleteMeal,
-  addWater,
-} from '../../../store/slices/nutritionSlice';
+  fetchMealsGrouped,
+  fetchWaterIntake,
+  fetchDailyTotals,
+  addMealAsync,
+  deleteMealAsync,
+  addWaterAsync,
+} from '../../../store/slices/nutritionSliceAsync';
+import { selectDailyGoals } from '../../../store/slices/userSliceAsync';
 
 const CalTracker = () => {
   const dispatch = useDispatch();
-  const selectedDate = useSelector(selectSelectedDate);
-  const meals = useSelector(selectMealsByDate);
-  const totals = useSelector(selectDailyTotals);
+  const { selectedDate, mealsByType, waterIntake, dailyTotals, loading } =
+    useSelector(state => state.nutrition);
   const goals = useSelector(selectDailyGoals);
-  const water = useSelector(selectWaterIntake);
   const progress = useSelector(selectDailyProgress);
-  const mealsByType = useSelector(selectMealsByType);
-  
+  const remainingCalories = useSelector(selectRemainingCalories);
+
   const [showAddMeal, setShowAddMeal] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState('breakfast');
   const [mealName, setMealName] = useState('');
@@ -43,41 +45,68 @@ const CalTracker = () => {
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
   const [fat, setFat] = useState('');
-  
-  const caloriePercentage = Math.min(100, Math.round((totals.calories / goals.calories) * 100));
-  const remainingCalories = Math.max(0, goals.calories - totals.calories);
-  
-  const getDateLabel = (dateStr) => {
+  const [refreshing, setRefreshing] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const caloriePercentage = Math.min(
+    100,
+    Math.round((dailyTotals.calories / goals.calories) * 100),
+  );
+
+  // Fetch data on mount and when date changes
+  useEffect(() => {
+    dispatch(fetchMealsGrouped(selectedDate));
+    dispatch(fetchWaterIntake(selectedDate));
+    dispatch(fetchDailyTotals(selectedDate));
+  }, [dispatch, selectedDate]);
+
+  // Handle pull to refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      dispatch(fetchMealsGrouped(selectedDate)),
+      dispatch(fetchWaterIntake(selectedDate)),
+      dispatch(fetchDailyTotals(selectedDate)),
+    ]);
+    setRefreshing(false);
+  };
+
+  const getDateLabel = dateStr => {
     const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-    
+    const yesterday = new Date(Date.now() - 86400000)
+      .toISOString()
+      .split('T')[0];
+
     if (dateStr === today) return 'Today';
     if (dateStr === yesterday) return 'Yesterday';
-    
-    return new Date(dateStr).toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
     });
   };
-  
-  const handleAddMeal = () => {
+
+  const handleAddMeal = async () => {
     if (!mealName.trim() || !calories) return;
-    
-    dispatch(addMeal({
-      type: selectedMealType,
-      name: mealName.trim(),
-      calories: parseInt(calories) || 0,
-      protein: parseInt(protein) || 0,
-      carbs: parseInt(carbs) || 0,
-      fat: parseInt(fat) || 0,
-      fiber: 0,
-    }));
-    
+
+    await dispatch(
+      addMealAsync({
+        type: selectedMealType,
+        name: mealName.trim(),
+        calories: parseInt(calories) || 0,
+        protein: parseInt(protein) || 0,
+        carbs: parseInt(carbs) || 0,
+        fat: parseInt(fat) || 0,
+        fiber: 0,
+        date: selectedDate,
+      }),
+    );
+
     resetMealForm();
     setShowAddMeal(false);
   };
-  
+
   const resetMealForm = () => {
     setMealName('');
     setCalories('');
@@ -85,21 +114,21 @@ const CalTracker = () => {
     setCarbs('');
     setFat('');
   };
-  
-  const handleDeleteMeal = (mealId) => {
-    dispatch(deleteMeal(mealId));
+
+  const handleDeleteMeal = mealId => {
+    dispatch(deleteMealAsync(mealId));
   };
-  
-  const handleAddWater = (amount) => {
-    dispatch(addWater(amount));
+
+  const handleAddWater = amount => {
+    dispatch(addWaterAsync({ amount, date: selectedDate }));
   };
-  
-  const waterGlasses = Math.floor(water / 250);
+
+  const waterGlasses = Math.floor(waterIntake / 250);
   const waterGoalGlasses = Math.floor(goals.water / 250);
-  
+
   const MealSection = ({ type, meals, icon }) => {
     const mealTotal = meals.reduce((sum, m) => sum + m.calories, 0);
-    
+
     return (
       <View style={styles.mealSection}>
         <View style={styles.mealSectionHeader}>
@@ -109,21 +138,27 @@ const CalTracker = () => {
           </View>
           <Text style={styles.mealSectionCalories}>{mealTotal} cal</Text>
         </View>
-        
+
         {meals.length === 0 ? (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addMealPrompt}
             onPress={() => {
               setSelectedMealType(type.toLowerCase());
               setShowAddMeal(true);
             }}
           >
-            <Icon name="plus-circle-outline" size={20} color={COLORS.textLight} />
-            <Text style={styles.addMealPromptText}>Add {type.toLowerCase()}</Text>
+            <Icon
+              name="plus-circle-outline"
+              size={20}
+              color={COLORS.textLight}
+            />
+            <Text style={styles.addMealPromptText}>
+              Add {type.toLowerCase()}
+            </Text>
           </TouchableOpacity>
         ) : (
           <>
-            {meals.map((meal) => (
+            {meals.map(meal => (
               <View key={meal.id} style={styles.mealItem}>
                 <View style={styles.mealItemInfo}>
                   <Text style={styles.mealItemName}>{meal.name}</Text>
@@ -132,8 +167,10 @@ const CalTracker = () => {
                   </Text>
                 </View>
                 <View style={styles.mealItemRight}>
-                  <Text style={styles.mealItemCalories}>{meal.calories} cal</Text>
-                  <TouchableOpacity 
+                  <Text style={styles.mealItemCalories}>
+                    {meal.calories} cal
+                  </Text>
+                  <TouchableOpacity
                     style={styles.deleteMealBtn}
                     onPress={() => handleDeleteMeal(meal.id)}
                   >
@@ -142,7 +179,7 @@ const CalTracker = () => {
                 </View>
               </View>
             ))}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addMoreBtn}
               onPress={() => {
                 setSelectedMealType(type.toLowerCase());
@@ -157,7 +194,7 @@ const CalTracker = () => {
       </View>
     );
   };
-  
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -166,12 +203,15 @@ const CalTracker = () => {
           <Text style={styles.headerTitle}>Nutrition</Text>
           <Text style={styles.headerDate}>{getDateLabel(selectedDate)}</Text>
         </View>
-        <TouchableOpacity style={styles.calendarBtn}>
+        <TouchableOpacity
+          style={styles.calendarBtn}
+          onPress={() => setShowDatePicker(true)}
+        >
           <Icon name="calendar" size={24} color={COLORS.text} />
         </TouchableOpacity>
       </View>
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -180,29 +220,56 @@ const CalTracker = () => {
         <View style={styles.calorieCard}>
           <View style={styles.calorieRing}>
             <View style={styles.ringContainer}>
-              <View style={[styles.ringBg]}>
-                <View 
-                  style={[
-                    styles.ringProgress,
-                    { 
-                      transform: [{ rotate: `${(caloriePercentage / 100) * 360}deg` }],
-                      backgroundColor: totals.calories > goals.calories ? COLORS.danger : COLORS.primary,
-                    }
-                  ]} 
+              {/* SVG Circular Progress */}
+              <Svg width={160} height={160} style={styles.svgRing}>
+                {/* Background Circle */}
+                <Circle
+                  cx={80}
+                  cy={80}
+                  r={70}
+                  stroke={COLORS.border}
+                  strokeWidth={14}
+                  fill="none"
                 />
-              </View>
+                {/* Progress Circle */}
+                <Circle
+                  cx={80}
+                  cy={80}
+                  r={70}
+                  stroke={
+                    dailyTotals.calories > goals.calories
+                      ? COLORS.danger
+                      : COLORS.primary
+                  }
+                  strokeWidth={14}
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 70}
+                  strokeDashoffset={
+                    2 * Math.PI * 70 * (1 - caloriePercentage / 100)
+                  }
+                  transform="rotate(-90 80 80)"
+                />
+              </Svg>
+              {/* Center Content */}
               <View style={styles.ringContent}>
-                <Text style={styles.calorieValue}>{totals.calories}</Text>
+                <Text style={styles.calorieValue}>{dailyTotals.calories}</Text>
                 <Text style={styles.calorieLabel}>of {goals.calories}</Text>
                 <Text style={styles.calorieUnit}>calories</Text>
               </View>
             </View>
           </View>
-          
+
           <View style={styles.calorieStats}>
             <View style={styles.calorieStat}>
-              <Icon name="silverware-fork-knife" size={20} color={COLORS.secondary} />
-              <Text style={styles.calorieStatValue}>{totals.calories}</Text>
+              <Icon
+                name="silverware-fork-knife"
+                size={20}
+                color={COLORS.secondary}
+              />
+              <Text style={styles.calorieStatValue}>
+                {dailyTotals.calories}
+              </Text>
               <Text style={styles.calorieStatLabel}>Eaten</Text>
             </View>
             <View style={styles.calorieStatDivider} />
@@ -213,13 +280,13 @@ const CalTracker = () => {
             </View>
           </View>
         </View>
-        
+
         {/* Macros */}
         <View style={styles.macrosCard}>
           <Text style={styles.cardTitle}>Macronutrients</Text>
           <NutritionProgress
             label="Protein"
-            current={totals.protein}
+            current={dailyTotals.protein}
             goal={goals.protein}
             unit="g"
             color={COLORS.secondary}
@@ -227,7 +294,7 @@ const CalTracker = () => {
           />
           <NutritionProgress
             label="Carbs"
-            current={totals.carbs}
+            current={dailyTotals.carbs}
             goal={goals.carbs}
             unit="g"
             color={COLORS.accent}
@@ -235,7 +302,7 @@ const CalTracker = () => {
           />
           <NutritionProgress
             label="Fat"
-            current={totals.fat}
+            current={dailyTotals.fat}
             goal={goals.fat}
             unit="g"
             color={COLORS.primary}
@@ -243,23 +310,23 @@ const CalTracker = () => {
           />
           <NutritionProgress
             label="Fiber"
-            current={totals.fiber}
+            current={dailyTotals.fiber}
             goal={goals.fiber}
             unit="g"
             color={COLORS.success}
             icon={<Icon name="leaf" size={16} color={COLORS.success} />}
           />
         </View>
-        
+
         {/* Water Intake */}
         <View style={styles.waterCard}>
           <View style={styles.waterHeader}>
             <Text style={styles.cardTitle}>💧 Water Intake</Text>
             <Text style={styles.waterProgress}>
-              {water} / {goals.water} ml
+              {waterIntake} / {goals.water} ml
             </Text>
           </View>
-          
+
           <View style={styles.waterGlasses}>
             {Array.from({ length: waterGoalGlasses }).map((_, index) => (
               <TouchableOpacity
@@ -274,23 +341,23 @@ const CalTracker = () => {
                   }
                 }}
               >
-                <Icon 
-                  name={index < waterGlasses ? 'cup' : 'cup-outline'} 
-                  size={24} 
-                  color={index < waterGlasses ? '#FFF' : COLORS.textLight} 
+                <Icon
+                  name={index < waterGlasses ? 'cup' : 'cup-outline'}
+                  size={24}
+                  color={index < waterGlasses ? '#FFF' : COLORS.textLight}
                 />
               </TouchableOpacity>
             ))}
           </View>
-          
+
           <View style={styles.waterButtons}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.waterBtn}
               onPress={() => handleAddWater(250)}
             >
               <Text style={styles.waterBtnText}>+250ml</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.waterBtn}
               onPress={() => handleAddWater(500)}
             >
@@ -298,27 +365,36 @@ const CalTracker = () => {
             </TouchableOpacity>
           </View>
         </View>
-        
+
         {/* Meals */}
         <View style={styles.mealsCard}>
           <Text style={styles.cardTitle}>Today's Meals</Text>
-          <MealSection type="Breakfast" meals={mealsByType.breakfast} icon="weather-sunny" />
-          <MealSection type="Lunch" meals={mealsByType.lunch} icon="white-balance-sunny" />
-          <MealSection type="Dinner" meals={mealsByType.dinner} icon="weather-night" />
+          <MealSection
+            type="Breakfast"
+            meals={mealsByType.breakfast}
+            icon="weather-sunny"
+          />
+          <MealSection
+            type="Lunch"
+            meals={mealsByType.lunch}
+            icon="white-balance-sunny"
+          />
+          <MealSection
+            type="Dinner"
+            meals={mealsByType.dinner}
+            icon="weather-night"
+          />
           <MealSection type="Snack" meals={mealsByType.snack} icon="cookie" />
         </View>
-        
+
         <View style={{ height: 100 }} />
       </ScrollView>
-      
+
       {/* FAB */}
-      <TouchableOpacity 
-        style={styles.fab}
-        onPress={() => setShowAddMeal(true)}
-      >
+      <TouchableOpacity style={styles.fab} onPress={() => setShowAddMeal(true)}>
         <Icon name="plus" size={28} color="#FFF" />
       </TouchableOpacity>
-      
+
       {/* Add Meal Modal */}
       <Modal
         visible={showAddMeal}
@@ -334,12 +410,12 @@ const CalTracker = () => {
                 <Icon name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.modalContent}>
               {/* Meal Type */}
               <Text style={styles.inputLabel}>Meal Type</Text>
               <View style={styles.mealTypeRow}>
-                {MEAL_TYPES.map((type) => (
+                {MEAL_TYPES.map(type => (
                   <TouchableOpacity
                     key={type.id}
                     style={[
@@ -348,21 +424,28 @@ const CalTracker = () => {
                     ]}
                     onPress={() => setSelectedMealType(type.id)}
                   >
-                    <Icon 
-                      name={type.icon} 
-                      size={18} 
-                      color={selectedMealType === type.id ? '#FFF' : COLORS.textSecondary} 
+                    <Icon
+                      name={type.icon}
+                      size={18}
+                      color={
+                        selectedMealType === type.id
+                          ? '#FFF'
+                          : COLORS.textSecondary
+                      }
                     />
-                    <Text style={[
-                      styles.mealTypeBtnText,
-                      selectedMealType === type.id && styles.mealTypeBtnTextActive,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.mealTypeBtnText,
+                        selectedMealType === type.id &&
+                          styles.mealTypeBtnTextActive,
+                      ]}
+                    >
                       {type.name}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               {/* Meal Name */}
               <Text style={styles.inputLabel}>Meal Name *</Text>
               <TextInput
@@ -372,7 +455,7 @@ const CalTracker = () => {
                 placeholder="e.g., Grilled Chicken Salad"
                 placeholderTextColor={COLORS.textLight}
               />
-              
+
               {/* Calories */}
               <Text style={styles.inputLabel}>Calories *</Text>
               <TextInput
@@ -383,7 +466,7 @@ const CalTracker = () => {
                 placeholderTextColor={COLORS.textLight}
                 keyboardType="numeric"
               />
-              
+
               {/* Macros Row */}
               <Text style={styles.inputLabel}>Macros (optional)</Text>
               <View style={styles.macrosRow}>
@@ -422,22 +505,170 @@ const CalTracker = () => {
                 </View>
               </View>
             </ScrollView>
-            
+
             <View style={styles.modalFooter}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => setShowAddMeal(false)}
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.addBtn, (!mealName || !calories) && styles.addBtnDisabled]}
+              <TouchableOpacity
+                style={[
+                  styles.addBtn,
+                  (!mealName || !calories) && styles.addBtnDisabled,
+                ]}
                 onPress={handleAddMeal}
                 disabled={!mealName || !calories}
               >
                 <Text style={styles.addBtnText}>Add Meal</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <View style={styles.datePickerOverlay}>
+          <View style={styles.datePickerModal}>
+            <View style={styles.datePickerHeader}>
+              <Text style={styles.datePickerTitle}>Select Date</Text>
+              <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                <Icon name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.datePickerContent}>
+              {/* Quick Options */}
+              <View style={styles.quickDateOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.quickDateBtn,
+                    selectedDate === new Date().toISOString().split('T')[0] &&
+                      styles.quickDateBtnActive,
+                  ]}
+                  onPress={() => {
+                    dispatch(
+                      setSelectedDate(new Date().toISOString().split('T')[0]),
+                    );
+                    setShowDatePicker(false);
+                  }}
+                >
+                  <Icon
+                    name="calendar-today"
+                    size={20}
+                    color={
+                      selectedDate === new Date().toISOString().split('T')[0]
+                        ? '#FFF'
+                        : COLORS.primary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.quickDateBtnText,
+                      selectedDate === new Date().toISOString().split('T')[0] &&
+                        styles.quickDateBtnTextActive,
+                    ]}
+                  >
+                    Today
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.quickDateBtn,
+                    selectedDate ===
+                      new Date(Date.now() - 86400000)
+                        .toISOString()
+                        .split('T')[0] && styles.quickDateBtnActive,
+                  ]}
+                  onPress={() => {
+                    dispatch(
+                      setSelectedDate(
+                        new Date(Date.now() - 86400000)
+                          .toISOString()
+                          .split('T')[0],
+                      ),
+                    );
+                    setShowDatePicker(false);
+                  }}
+                >
+                  <Icon
+                    name="calendar-arrow-left"
+                    size={20}
+                    color={
+                      selectedDate ===
+                      new Date(Date.now() - 86400000)
+                        .toISOString()
+                        .split('T')[0]
+                        ? '#FFF'
+                        : COLORS.primary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.quickDateBtnText,
+                      selectedDate ===
+                        new Date(Date.now() - 86400000)
+                          .toISOString()
+                          .split('T')[0] && styles.quickDateBtnTextActive,
+                    ]}
+                  >
+                    Yesterday
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Last 7 Days */}
+              <Text style={styles.datePickerLabel}>Last 7 Days</Text>
+              {[...Array(7)].map((_, i) => {
+                const date = new Date(Date.now() - i * 86400000);
+                const dateStr = date.toISOString().split('T')[0];
+                const isSelected = selectedDate === dateStr;
+                return (
+                  <TouchableOpacity
+                    key={dateStr}
+                    style={[
+                      styles.dateOption,
+                      isSelected && styles.dateOptionActive,
+                    ]}
+                    onPress={() => {
+                      dispatch(setSelectedDate(dateStr));
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <View style={styles.dateOptionLeft}>
+                      <Text
+                        style={[
+                          styles.dateOptionDay,
+                          isSelected && styles.dateOptionTextActive,
+                        ]}
+                      >
+                        {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.dateOptionDate,
+                          isSelected && styles.dateOptionTextActive,
+                        ]}
+                      >
+                        {date.toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <Icon name="check-circle" size={22} color="#FFF" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -457,7 +688,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#E8F5E9',
   },
   headerTitle: {
     fontSize: 26,
@@ -473,7 +704,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -500,27 +731,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  ringBg: {
+  svgRing: {
     position: 'absolute',
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 12,
-    borderColor: COLORS.border,
-  },
-  ringProgress: {
-    position: 'absolute',
-    width: 12,
-    height: 80,
-    backgroundColor: COLORS.primary,
-    borderRadius: 6,
-    top: -6,
-    left: '50%',
-    marginLeft: -6,
-    transformOrigin: 'center bottom',
   },
   ringContent: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
   calorieValue: {
     fontSize: 36,
@@ -845,6 +1061,96 @@ const styles = StyleSheet.create({
   addBtnText: {
     fontSize: 16,
     fontWeight: '600',
+    color: '#FFF',
+  },
+  // Date Picker Styles
+  datePickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  datePickerModal: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  datePickerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  datePickerContent: {
+    padding: 16,
+  },
+  quickDateOptions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  quickDateBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary + '15',
+  },
+  quickDateBtnActive: {
+    backgroundColor: COLORS.primary,
+  },
+  quickDateBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  quickDateBtnTextActive: {
+    color: '#FFF',
+  },
+  datePickerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: 12,
+  },
+  dateOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: COLORS.background,
+    marginBottom: 8,
+  },
+  dateOptionActive: {
+    backgroundColor: COLORS.primary,
+  },
+  dateOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dateOptionDay: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    width: 40,
+  },
+  dateOptionDate: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+  },
+  dateOptionTextActive: {
     color: '#FFF',
   },
 });

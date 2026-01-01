@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Switch,
   Modal,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -18,57 +20,126 @@ import {
   selectPreferences,
   selectNotifications,
   selectStats,
-  updateProfile,
-  updatePreferences,
+  selectUserLoading,
+  fetchProfile,
+  updateProfileAsync,
+  updatePreferencesAsync,
+  updateNotificationsAsync,
   setDietType,
   setHealthGoal,
   toggleNotification,
-} from '../../../store/slices/userSlice';
+  resetUser,
+} from '../../../store/slices/userSliceAsync';
+import { useAuth } from '../../hooks/useAuth';
 
 const Profile = () => {
   const dispatch = useDispatch();
+  const { signOut } = useAuth();
   const profile = useSelector(selectProfile);
   const preferences = useSelector(selectPreferences);
   const notifications = useSelector(selectNotifications);
   const stats = useSelector(selectStats);
-  
+  const loading = useSelector(selectUserLoading);
+
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showDietPicker, setShowDietPicker] = useState(false);
   const [showGoalPicker, setShowGoalPicker] = useState(false);
-  
-  const [editName, setEditName] = useState(profile.name);
-  const [editAge, setEditAge] = useState(String(profile.age));
-  const [editHeight, setEditHeight] = useState(String(profile.height));
-  const [editWeight, setEditWeight] = useState(String(profile.weight));
-  
+
+  const [editName, setEditName] = useState(profile.name || '');
+  const [editAge, setEditAge] = useState(String(profile.age || ''));
+  const [editHeight, setEditHeight] = useState(String(profile.height || ''));
+  const [editWeight, setEditWeight] = useState(String(profile.weight || ''));
+
+  // Fetch profile on mount
+  useEffect(() => {
+    dispatch(fetchProfile());
+  }, [dispatch]);
+
+  // Update edit fields when profile changes
+  useEffect(() => {
+    setEditName(profile.name || '');
+    setEditAge(String(profile.age || ''));
+    setEditHeight(String(profile.height || ''));
+    setEditWeight(String(profile.weight || ''));
+  }, [profile]);
+
   const currentDiet = DIET_TYPES.find(d => d.id === preferences.dietType);
   const currentGoal = HEALTH_GOALS.find(g => g.id === preferences.healthGoal);
-  
-  const bmi = profile.weight / ((profile.height / 100) ** 2);
-  const bmiStatus = bmi < 18.5 ? 'Underweight' : bmi < 25 ? 'Normal' : bmi < 30 ? 'Overweight' : 'Obese';
-  const bmiColor = bmi < 18.5 ? COLORS.warning : bmi < 25 ? COLORS.success : bmi < 30 ? COLORS.warning : COLORS.danger;
-  
-  const handleSaveProfile = () => {
-    dispatch(updateProfile({
-      name: editName,
-      age: parseInt(editAge) || profile.age,
-      height: parseInt(editHeight) || profile.height,
-      weight: parseFloat(editWeight) || profile.weight,
-    }));
+
+  const bmi =
+    profile.weight && profile.height
+      ? profile.weight / (profile.height / 100) ** 2
+      : 0;
+  const bmiStatus =
+    bmi < 18.5
+      ? 'Underweight'
+      : bmi < 25
+      ? 'Normal'
+      : bmi < 30
+      ? 'Overweight'
+      : 'Obese';
+  const bmiColor =
+    bmi < 18.5
+      ? COLORS.warning
+      : bmi < 25
+      ? COLORS.success
+      : bmi < 30
+      ? COLORS.warning
+      : COLORS.danger;
+
+  const handleSaveProfile = async () => {
+    await dispatch(
+      updateProfileAsync({
+        name: editName,
+        age: parseInt(editAge) || profile.age,
+        height: parseInt(editHeight) || profile.height,
+        weight: parseFloat(editWeight) || profile.weight,
+      }),
+    );
     setShowEditProfile(false);
   };
-  
-  const SettingItem = ({ icon, label, value, onPress, toggle, toggleValue, danger }) => (
-    <TouchableOpacity 
+
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
+          dispatch(resetUser());
+        },
+      },
+    ]);
+  };
+
+  const SettingItem = ({
+    icon,
+    label,
+    value,
+    onPress,
+    toggle,
+    toggleValue,
+    danger,
+  }) => (
+    <TouchableOpacity
       style={styles.settingItem}
       onPress={onPress}
       disabled={toggle}
     >
       <View style={[styles.settingIcon, danger && styles.settingIconDanger]}>
-        <Icon name={icon} size={20} color={danger ? COLORS.danger : COLORS.primary} />
+        <Icon
+          name={icon}
+          size={20}
+          color={danger ? COLORS.danger : COLORS.primary}
+        />
       </View>
       <View style={styles.settingContent}>
-        <Text style={[styles.settingLabel, danger && styles.settingLabelDanger]}>{label}</Text>
+        <Text
+          style={[styles.settingLabel, danger && styles.settingLabelDanger]}
+        >
+          {label}
+        </Text>
         {value && <Text style={styles.settingValue}>{value}</Text>}
       </View>
       {toggle ? (
@@ -83,7 +154,7 @@ const Profile = () => {
       )}
     </TouchableOpacity>
   );
-  
+
   const StatCard = ({ icon, label, value, color }) => (
     <View style={styles.statCard}>
       <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
@@ -93,21 +164,21 @@ const Profile = () => {
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
-  
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.editBtn}
           onPress={() => setShowEditProfile(true)}
         >
           <Icon name="pencil" size={20} color={COLORS.primary} />
         </TouchableOpacity>
       </View>
-      
-      <ScrollView 
+
+      <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -117,7 +188,10 @@ const Profile = () => {
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {profile.name.split(' ').map(n => n[0]).join('')}
+                {profile.name
+                  .split(' ')
+                  .map(n => n[0])
+                  .join('')}
               </Text>
             </View>
             <TouchableOpacity style={styles.avatarEditBtn}>
@@ -126,7 +200,7 @@ const Profile = () => {
           </View>
           <Text style={styles.profileName}>{profile.name}</Text>
           <Text style={styles.profileEmail}>{profile.email}</Text>
-          
+
           <View style={styles.profileStats}>
             <View style={styles.profileStatItem}>
               <Text style={styles.profileStatValue}>{profile.age}</Text>
@@ -144,20 +218,31 @@ const Profile = () => {
             </View>
           </View>
         </View>
-        
+
         {/* BMI Card */}
         <View style={styles.bmiCard}>
           <View style={styles.bmiHeader}>
             <Text style={styles.cardTitle}>Body Mass Index</Text>
-            <View style={[styles.bmiBadge, { backgroundColor: bmiColor + '20' }]}>
-              <Text style={[styles.bmiBadgeText, { color: bmiColor }]}>{bmiStatus}</Text>
+            <View
+              style={[styles.bmiBadge, { backgroundColor: bmiColor + '20' }]}
+            >
+              <Text style={[styles.bmiBadgeText, { color: bmiColor }]}>
+                {bmiStatus}
+              </Text>
             </View>
           </View>
           <View style={styles.bmiContent}>
-            <Text style={[styles.bmiValue, { color: bmiColor }]}>{bmi.toFixed(1)}</Text>
+            <Text style={[styles.bmiValue, { color: bmiColor }]}>
+              {bmi.toFixed(1)}
+            </Text>
             <View style={styles.bmiScale}>
               <View style={styles.bmiScaleBar}>
-                <View style={[styles.bmiIndicator, { left: `${Math.min(100, (bmi / 40) * 100)}%` }]} />
+                <View
+                  style={[
+                    styles.bmiIndicator,
+                    { left: `${Math.min(100, (bmi / 40) * 100)}%` },
+                  ]}
+                />
               </View>
               <View style={styles.bmiLabels}>
                 <Text style={styles.bmiLabel}>15</Text>
@@ -167,14 +252,29 @@ const Profile = () => {
             </View>
           </View>
         </View>
-        
+
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatCard icon="food-apple" label="Items Saved" value={stats.itemsSaved} color={COLORS.success} />
-          <StatCard icon="chef-hat" label="Recipes Made" value={stats.recipesMade} color={COLORS.primary} />
-          <StatCard icon="fire" label="Day Streak" value={stats.streak} color={COLORS.warning} />
+          <StatCard
+            icon="food-apple"
+            label="Items Saved"
+            value={stats.itemsSaved}
+            color={COLORS.success}
+          />
+          <StatCard
+            icon="chef-hat"
+            label="Recipes Made"
+            value={stats.recipesMade}
+            color={COLORS.primary}
+          />
+          <StatCard
+            icon="fire"
+            label="Day Streak"
+            value={stats.streak}
+            color={COLORS.warning}
+          />
         </View>
-        
+
         {/* Preferences */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Preferences</Text>
@@ -194,12 +294,16 @@ const Profile = () => {
             <SettingItem
               icon="allergy"
               label="Allergies"
-              value={preferences.allergies.length > 0 ? `${preferences.allergies.length} items` : 'None'}
+              value={
+                preferences.allergies.length > 0
+                  ? `${preferences.allergies.length} items`
+                  : 'None'
+              }
               onPress={() => {}}
             />
           </View>
         </View>
-        
+
         {/* Notifications */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Notifications</Text>
@@ -234,7 +338,7 @@ const Profile = () => {
             />
           </View>
         </View>
-        
+
         {/* Account */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
@@ -259,14 +363,14 @@ const Profile = () => {
               icon="logout"
               label="Sign Out"
               danger
-              onPress={() => {}}
+              onPress={handleSignOut}
             />
           </View>
         </View>
-        
+
         <View style={{ height: 100 }} />
       </ScrollView>
-      
+
       {/* Edit Profile Modal */}
       <Modal
         visible={showEditProfile}
@@ -282,7 +386,7 @@ const Profile = () => {
                 <Icon name="close" size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.modalContent}>
               <Text style={styles.inputLabel}>Name</Text>
               <TextInput
@@ -292,7 +396,7 @@ const Profile = () => {
                 placeholder="Your name"
                 placeholderTextColor={COLORS.textLight}
               />
-              
+
               <Text style={styles.inputLabel}>Age</Text>
               <TextInput
                 style={styles.input}
@@ -302,7 +406,7 @@ const Profile = () => {
                 placeholderTextColor={COLORS.textLight}
                 keyboardType="numeric"
               />
-              
+
               <Text style={styles.inputLabel}>Height (cm)</Text>
               <TextInput
                 style={styles.input}
@@ -312,7 +416,7 @@ const Profile = () => {
                 placeholderTextColor={COLORS.textLight}
                 keyboardType="numeric"
               />
-              
+
               <Text style={styles.inputLabel}>Weight (kg)</Text>
               <TextInput
                 style={styles.input}
@@ -323,15 +427,15 @@ const Profile = () => {
                 keyboardType="numeric"
               />
             </ScrollView>
-            
+
             <View style={styles.modalFooter}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => setShowEditProfile(false)}
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.saveBtn}
                 onPress={handleSaveProfile}
               >
@@ -341,7 +445,7 @@ const Profile = () => {
           </View>
         </View>
       </Modal>
-      
+
       {/* Diet Type Picker */}
       <Modal
         visible={showDietPicker}
@@ -358,34 +462,49 @@ const Profile = () => {
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerContent}>
-              {DIET_TYPES.map((diet) => (
+              {DIET_TYPES.map(diet => (
                 <TouchableOpacity
                   key={diet.id}
                   style={[
                     styles.pickerOption,
-                    preferences.dietType === diet.id && styles.pickerOptionActive,
+                    preferences.dietType === diet.id &&
+                      styles.pickerOptionActive,
                   ]}
                   onPress={() => {
                     dispatch(setDietType(diet.id));
+                    dispatch(updatePreferencesAsync({ diet_type: diet.id }));
                     setShowDietPicker(false);
                   }}
                 >
-                  <Icon 
-                    name={diet.icon} 
-                    size={24} 
-                    color={preferences.dietType === diet.id ? COLORS.primary : COLORS.textSecondary} 
+                  <Icon
+                    name={diet.icon}
+                    size={24}
+                    color={
+                      preferences.dietType === diet.id
+                        ? COLORS.primary
+                        : COLORS.textSecondary
+                    }
                   />
                   <View style={styles.pickerOptionText}>
-                    <Text style={[
-                      styles.pickerOptionLabel,
-                      preferences.dietType === diet.id && styles.pickerOptionLabelActive,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.pickerOptionLabel,
+                        preferences.dietType === diet.id &&
+                          styles.pickerOptionLabelActive,
+                      ]}
+                    >
                       {diet.name}
                     </Text>
-                    <Text style={styles.pickerOptionDesc}>{diet.description}</Text>
+                    <Text style={styles.pickerOptionDesc}>
+                      {diet.description}
+                    </Text>
                   </View>
                   {preferences.dietType === diet.id && (
-                    <Icon name="check-circle" size={24} color={COLORS.primary} />
+                    <Icon
+                      name="check-circle"
+                      size={24}
+                      color={COLORS.primary}
+                    />
                   )}
                 </TouchableOpacity>
               ))}
@@ -393,7 +512,7 @@ const Profile = () => {
           </View>
         </View>
       </Modal>
-      
+
       {/* Health Goal Picker */}
       <Modal
         visible={showGoalPicker}
@@ -410,34 +529,49 @@ const Profile = () => {
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.pickerContent}>
-              {HEALTH_GOALS.map((goal) => (
+              {HEALTH_GOALS.map(goal => (
                 <TouchableOpacity
                   key={goal.id}
                   style={[
                     styles.pickerOption,
-                    preferences.healthGoal === goal.id && styles.pickerOptionActive,
+                    preferences.healthGoal === goal.id &&
+                      styles.pickerOptionActive,
                   ]}
                   onPress={() => {
                     dispatch(setHealthGoal(goal.id));
+                    dispatch(updatePreferencesAsync({ health_goal: goal.id }));
                     setShowGoalPicker(false);
                   }}
                 >
-                  <Icon 
-                    name={goal.icon} 
-                    size={24} 
-                    color={preferences.healthGoal === goal.id ? COLORS.primary : COLORS.textSecondary} 
+                  <Icon
+                    name={goal.icon}
+                    size={24}
+                    color={
+                      preferences.healthGoal === goal.id
+                        ? COLORS.primary
+                        : COLORS.textSecondary
+                    }
                   />
                   <View style={styles.pickerOptionText}>
-                    <Text style={[
-                      styles.pickerOptionLabel,
-                      preferences.healthGoal === goal.id && styles.pickerOptionLabelActive,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.pickerOptionLabel,
+                        preferences.healthGoal === goal.id &&
+                          styles.pickerOptionLabelActive,
+                      ]}
+                    >
                       {goal.name}
                     </Text>
-                    <Text style={styles.pickerOptionDesc}>{goal.description}</Text>
+                    <Text style={styles.pickerOptionDesc}>
+                      {goal.description}
+                    </Text>
                   </View>
                   {preferences.healthGoal === goal.id && (
-                    <Icon name="check-circle" size={24} color={COLORS.primary} />
+                    <Icon
+                      name="check-circle"
+                      size={24}
+                      color={COLORS.primary}
+                    />
                   )}
                 </TouchableOpacity>
               ))}
@@ -461,7 +595,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
-    backgroundColor: COLORS.surface,
+    backgroundColor: '#E8F5E9',
   },
   headerTitle: {
     fontSize: 26,
@@ -472,7 +606,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
   },

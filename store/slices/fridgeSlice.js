@@ -12,7 +12,8 @@ const initialItems = [
     amountLeft: 0.75,
     purchaseDate: '2024-12-28',
     expiryDate: '2025-01-05',
-    image: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1563636619-e9143da7973b?w=200&h=200&fit=crop',
     notes: 'Whole milk',
     calories: 149,
     protein: 8,
@@ -28,7 +29,8 @@ const initialItems = [
     amountLeft: 0.5,
     purchaseDate: '2024-12-26',
     expiryDate: '2025-01-10',
-    image: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=200&h=200&fit=crop',
     notes: 'Free range',
     calories: 78,
     protein: 6,
@@ -44,7 +46,8 @@ const initialItems = [
     amountLeft: 0.3,
     purchaseDate: '2024-12-29',
     expiryDate: '2025-01-02',
-    image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=200&h=200&fit=crop',
     notes: 'Fresh baby spinach',
     calories: 23,
     protein: 3,
@@ -60,7 +63,8 @@ const initialItems = [
     amountLeft: 0.9,
     purchaseDate: '2024-12-30',
     expiryDate: '2025-01-03',
-    image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=200&h=200&fit=crop',
     notes: 'Boneless',
     calories: 165,
     protein: 31,
@@ -76,7 +80,8 @@ const initialItems = [
     amountLeft: 0.6,
     purchaseDate: '2024-12-27',
     expiryDate: '2025-01-08',
-    image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=200&h=200&fit=crop',
     notes: 'Plain, no sugar',
     calories: 100,
     protein: 17,
@@ -92,7 +97,8 @@ const initialItems = [
     amountLeft: 1.0,
     purchaseDate: '2024-12-29',
     expiryDate: '2025-01-06',
-    image: 'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=200&h=200&fit=crop',
     notes: 'Mixed colors',
     calories: 31,
     protein: 1,
@@ -108,7 +114,8 @@ const initialItems = [
     amountLeft: 0.8,
     purchaseDate: '2024-12-25',
     expiryDate: '2025-01-15',
-    image: 'https://images.unsplash.com/photo-1618164436241-4473940d1f5c?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1618164436241-4473940d1f5c?w=200&h=200&fit=crop',
     notes: 'Sharp cheddar',
     calories: 113,
     protein: 7,
@@ -124,7 +131,8 @@ const initialItems = [
     amountLeft: 0.5,
     purchaseDate: '2024-12-28',
     expiryDate: '2025-01-04',
-    image: 'https://images.unsplash.com/photo-1546470427-f5c9e4460a5d?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1546470427-f5c9e4460a5d?w=200&h=200&fit=crop',
     notes: 'Roma tomatoes',
     calories: 18,
     protein: 1,
@@ -140,7 +148,8 @@ const initialItems = [
     amountLeft: 0.4,
     purchaseDate: '2024-12-26',
     expiryDate: '2025-01-05',
-    image: 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?w=200&h=200&fit=crop',
     notes: 'Fresh squeezed',
     calories: 112,
     protein: 2,
@@ -156,7 +165,8 @@ const initialItems = [
     amountLeft: 0.7,
     purchaseDate: '2024-12-20',
     expiryDate: '2025-02-01',
-    image: 'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=200&h=200&fit=crop',
+    image:
+      'https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=200&h=200&fit=crop',
     notes: 'Unsalted',
     calories: 102,
     protein: 0,
@@ -184,7 +194,9 @@ const fridgeSlice = createSlice({
       state.items.push(newItem);
     },
     updateItem: (state, action) => {
-      const index = state.items.findIndex(item => item.id === action.payload.id);
+      const index = state.items.findIndex(
+        item => item.id === action.payload.id,
+      );
       if (index !== -1) {
         state.items[index] = { ...state.items[index], ...action.payload };
       }
@@ -233,31 +245,36 @@ export const {
 } = fridgeSlice.actions;
 
 // Selectors
-export const selectAllItems = (state) => state.fridge.items;
-export const selectSelectedCategory = (state) => state.fridge.selectedCategory;
-export const selectSearchQuery = (state) => state.fridge.searchQuery;
+export const selectAllItems = state => state.fridge.items;
+export const selectSelectedCategory = state => state.fridge.selectedCategory;
+export const selectSearchQuery = state => state.fridge.searchQuery;
 
-export const selectFilteredItems = (state) => {
+export const selectFilteredItems = state => {
   let items = state.fridge.items;
-  
+
   // Filter by category
   if (state.fridge.selectedCategory !== 'all') {
-    items = items.filter(item => item.category === state.fridge.selectedCategory);
+    items = items.filter(
+      item => item.category === state.fridge.selectedCategory,
+    );
   }
-  
+
   // Filter by search
   if (state.fridge.searchQuery) {
     const query = state.fridge.searchQuery.toLowerCase();
-    items = items.filter(item => 
-      item.name.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query)
+    items = items.filter(
+      item =>
+        item.name.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query),
     );
   }
-  
+
   // Sort
   switch (state.fridge.sortBy) {
     case 'expiry':
-      items = [...items].sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+      items = [...items].sort(
+        (a, b) => new Date(a.expiryDate) - new Date(b.expiryDate),
+      );
       break;
     case 'name':
       items = [...items].sort((a, b) => a.name.localeCompare(b.name));
@@ -268,20 +285,22 @@ export const selectFilteredItems = (state) => {
     default:
       break;
   }
-  
+
   return items;
 };
 
-export const selectExpiringItems = (state) => {
+export const selectExpiringItems = state => {
   const today = new Date();
-  return state.fridge.items.filter(item => {
-    const expiry = new Date(item.expiryDate);
-    const diff = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-    return diff >= 0 && diff <= 3;
-  }).sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+  return state.fridge.items
+    .filter(item => {
+      const expiry = new Date(item.expiryDate);
+      const diff = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+      return diff >= 0 && diff <= 3;
+    })
+    .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
 };
 
-export const selectExpiredItems = (state) => {
+export const selectExpiredItems = state => {
   const today = new Date();
   return state.fridge.items.filter(item => new Date(item.expiryDate) < today);
 };

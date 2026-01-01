@@ -3,18 +3,38 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { COLORS } from '../utils/constants';
 
-const RecipeCard = ({ recipe, onPress, onSave, isSaved = false, compact = false }) => {
+const RecipeCard = ({
+  recipe,
+  onPress,
+  onSave,
+  isSaved = false,
+  compact = false,
+  showAiBadge = false,
+}) => {
+  const isAiGenerated = recipe.isAiGenerated || showAiBadge;
+
   if (compact) {
     return (
-      <TouchableOpacity style={styles.compactCard} onPress={onPress} activeOpacity={0.8}>
+      <TouchableOpacity
+        style={styles.compactCard}
+        onPress={onPress}
+        activeOpacity={0.8}
+      >
         <Image source={{ uri: recipe.image }} style={styles.compactImage} />
         <View style={styles.compactOverlay}>
           <View style={styles.matchBadgeSmall}>
             <Text style={styles.matchTextSmall}>{recipe.matchPercentage}%</Text>
           </View>
+          {isAiGenerated && (
+            <View style={styles.aiBadgeSmall}>
+              <Icon name="auto-fix" size={10} color="#FFF" />
+            </View>
+          )}
         </View>
         <View style={styles.compactInfo}>
-          <Text style={styles.compactName} numberOfLines={2}>{recipe.name}</Text>
+          <Text style={styles.compactName} numberOfLines={2}>
+            {recipe.name}
+          </Text>
           <View style={styles.compactMeta}>
             <Icon name="clock-outline" size={12} color={COLORS.textSecondary} />
             <Text style={styles.compactMetaText}>
@@ -25,24 +45,44 @@ const RecipeCard = ({ recipe, onPress, onSave, isSaved = false, compact = false 
       </TouchableOpacity>
     );
   }
-  
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.imageContainer}>
         <Image source={{ uri: recipe.image }} style={styles.image} />
         <View style={styles.overlay}>
-          <View style={styles.matchBadge}>
-            <Icon name="check-circle" size={16} color="#FFF" />
-            <Text style={styles.matchText}>{recipe.matchPercentage}% Match</Text>
+          <View style={styles.badgeRow}>
+            <View
+              style={[styles.matchBadge, isAiGenerated && styles.matchBadgeAi]}
+            >
+              {isAiGenerated && (
+                <Icon
+                  name="auto-fix"
+                  size={14}
+                  color="#FFF"
+                  style={{ marginRight: 4 }}
+                />
+              )}
+              <Icon name="check-circle" size={16} color="#FFF" />
+              <Text style={styles.matchText}>
+                {recipe.matchPercentage}% Match
+              </Text>
+            </View>
+            {isAiGenerated && (
+              <View style={styles.aiBadge}>
+                <Icon name="robot" size={14} color="#FFF" />
+                <Text style={styles.aiBadgeText}>AI</Text>
+              </View>
+            )}
           </View>
-          <TouchableOpacity 
-            style={[styles.saveBtn, isSaved && styles.saveBtnActive]} 
+          <TouchableOpacity
+            style={[styles.saveBtn, isSaved && styles.saveBtnActive]}
             onPress={() => onSave?.(recipe.id)}
           >
-            <Icon 
-              name={isSaved ? 'heart' : 'heart-outline'} 
-              size={22} 
-              color={isSaved ? COLORS.danger : '#FFF'} 
+            <Icon
+              name={isSaved ? 'heart' : 'heart-outline'}
+              size={22}
+              color={isSaved ? COLORS.danger : '#FFF'}
             />
           </TouchableOpacity>
         </View>
@@ -50,26 +90,66 @@ const RecipeCard = ({ recipe, onPress, onSave, isSaved = false, compact = false 
           <Text style={styles.difficultyText}>{recipe.difficulty}</Text>
         </View>
       </View>
-      
+
       <View style={styles.content}>
-        <Text style={styles.name}>{recipe.name}</Text>
-        <Text style={styles.description} numberOfLines={2}>{recipe.description}</Text>
-        
+        <View style={styles.nameRow}>
+          <Text style={styles.name}>{recipe.name}</Text>
+          {isAiGenerated && (
+            <View style={styles.aiGeneratedTag}>
+              <Icon name="sparkles" size={12} color={COLORS.accent} />
+              <Text style={styles.aiGeneratedText}>AI Generated</Text>
+            </View>
+          )}
+        </View>
+        <Text style={styles.description} numberOfLines={2}>
+          {recipe.description}
+        </Text>
+
+        {/* Show what's from fridge vs what to buy for AI recipes */}
+        {isAiGenerated &&
+          recipe.usesFromFridge &&
+          recipe.usesFromFridge.length > 0 && (
+            <View style={styles.fridgeMatchInfo}>
+              <Icon name="fridge-outline" size={14} color={COLORS.secondary} />
+              <Text style={styles.fridgeMatchText}>
+                Uses {recipe.usesFromFridge.length} items from your fridge
+              </Text>
+            </View>
+          )}
+
+        {isAiGenerated && recipe.needToBuy && recipe.needToBuy.length > 0 && (
+          <View style={styles.needToBuyInfo}>
+            <Icon name="cart-outline" size={14} color={COLORS.accent} />
+            <Text style={styles.needToBuyText}>
+              Need to buy: {recipe.needToBuy.slice(0, 3).join(', ')}
+              {recipe.needToBuy.length > 3
+                ? ` +${recipe.needToBuy.length - 3} more`
+                : ''}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
             <Icon name="clock-outline" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.metaText}>{recipe.prepTime + recipe.cookTime} min</Text>
+            <Text style={styles.metaText}>
+              {recipe.prepTime + recipe.cookTime} min
+            </Text>
           </View>
           <View style={styles.metaItem}>
             <Icon name="fire" size={16} color={COLORS.accent} />
             <Text style={styles.metaText}>{recipe.calories} cal</Text>
           </View>
           <View style={styles.metaItem}>
-            <Icon name="account-outline" size={16} color={COLORS.textSecondary} />
+            <Icon
+              name="account-outline"
+              size={16}
+              color={COLORS.textSecondary}
+            />
             <Text style={styles.metaText}>{recipe.servings} servings</Text>
           </View>
         </View>
-        
+
         <View style={styles.tagsRow}>
           {recipe.tags.slice(0, 3).map((tag, index) => (
             <View key={index} style={styles.tag}>
@@ -77,7 +157,7 @@ const RecipeCard = ({ recipe, onPress, onSave, isSaved = false, compact = false 
             </View>
           ))}
         </View>
-        
+
         <View style={styles.nutritionRow}>
           <View style={styles.nutritionItem}>
             <Text style={styles.nutritionValue}>{recipe.protein}g</Text>
@@ -287,6 +367,81 @@ const styles = StyleSheet.create({
   compactMetaText: {
     fontSize: 12,
     color: COLORS.textSecondary,
+  },
+  // AI Badge styles
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  matchBadgeAi: {
+    backgroundColor: COLORS.accent,
+  },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 4,
+  },
+  aiBadgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  aiBadgeSmall: {
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  aiGeneratedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.accent + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 4,
+  },
+  aiGeneratedText: {
+    fontSize: 11,
+    color: COLORS.accent,
+    fontWeight: '600',
+  },
+  fridgeMatchInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  fridgeMatchText: {
+    fontSize: 12,
+    color: COLORS.secondary,
+    fontWeight: '500',
+  },
+  needToBuyInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  needToBuyText: {
+    fontSize: 12,
+    color: COLORS.accent,
+    fontWeight: '500',
   },
 });
 

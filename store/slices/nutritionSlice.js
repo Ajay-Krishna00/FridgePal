@@ -119,7 +119,9 @@ const nutritionSlice = createSlice({
       state.meals.push(newMeal);
     },
     updateMeal: (state, action) => {
-      const index = state.meals.findIndex(meal => meal.id === action.payload.id);
+      const index = state.meals.findIndex(
+        meal => meal.id === action.payload.id,
+      );
       if (index !== -1) {
         state.meals[index] = { ...state.meals[index], ...action.payload };
       }
@@ -174,36 +176,39 @@ export const {
 } = nutritionSlice.actions;
 
 // Selectors
-export const selectAllMeals = (state) => state.nutrition.meals;
-export const selectSelectedDate = (state) => state.nutrition.selectedDate;
-export const selectDailyGoals = (state) => state.nutrition.dailyGoals;
+export const selectAllMeals = state => state.nutrition.meals;
+export const selectSelectedDate = state => state.nutrition.selectedDate;
+export const selectDailyGoals = state => state.nutrition.dailyGoals;
 
-export const selectMealsByDate = (state) => {
+export const selectMealsByDate = state => {
   const date = state.nutrition.selectedDate;
   return state.nutrition.meals.filter(meal => meal.date === date);
 };
 
-export const selectDailyTotals = (state) => {
+export const selectDailyTotals = state => {
   const meals = selectMealsByDate(state);
-  return meals.reduce((totals, meal) => ({
-    calories: totals.calories + (meal.calories || 0),
-    protein: totals.protein + (meal.protein || 0),
-    carbs: totals.carbs + (meal.carbs || 0),
-    fat: totals.fat + (meal.fat || 0),
-    fiber: totals.fiber + (meal.fiber || 0),
-  }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+  return meals.reduce(
+    (totals, meal) => ({
+      calories: totals.calories + (meal.calories || 0),
+      protein: totals.protein + (meal.protein || 0),
+      carbs: totals.carbs + (meal.carbs || 0),
+      fat: totals.fat + (meal.fat || 0),
+      fiber: totals.fiber + (meal.fiber || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+  );
 };
 
-export const selectWaterIntake = (state) => {
+export const selectWaterIntake = state => {
   const date = state.nutrition.selectedDate;
   return state.nutrition.waterIntake[date] || 0;
 };
 
-export const selectDailyProgress = (state) => {
+export const selectDailyProgress = state => {
   const totals = selectDailyTotals(state);
   const goals = state.nutrition.dailyGoals;
   const water = selectWaterIntake(state);
-  
+
   return {
     calories: Math.min(1, totals.calories / goals.calories),
     protein: Math.min(1, totals.protein / goals.protein),
@@ -214,7 +219,7 @@ export const selectDailyProgress = (state) => {
   };
 };
 
-export const selectMealsByType = (state) => {
+export const selectMealsByType = state => {
   const meals = selectMealsByDate(state);
   return {
     breakfast: meals.filter(m => m.type === 'breakfast'),
@@ -224,24 +229,27 @@ export const selectMealsByType = (state) => {
   };
 };
 
-export const selectWeeklyCalories = (state) => {
+export const selectWeeklyCalories = state => {
   const today = new Date();
   const weekData = [];
-  
+
   for (let i = 6; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split('T')[0];
     const dayMeals = state.nutrition.meals.filter(m => m.date === dateStr);
-    const totalCalories = dayMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
-    
+    const totalCalories = dayMeals.reduce(
+      (sum, m) => sum + (m.calories || 0),
+      0,
+    );
+
     weekData.push({
       day: date.toLocaleDateString('en-US', { weekday: 'short' }),
       date: dateStr,
       calories: totalCalories,
     });
   }
-  
+
   return weekData;
 };
 

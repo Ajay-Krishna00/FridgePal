@@ -19,16 +19,16 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
   const [unit, setUnit] = useState('pieces');
   const [notes, setNotes] = useState('');
   const [expiryDays, setExpiryDays] = useState('7');
-  
+
   const units = ['pieces', 'kg', 'g', 'L', 'ml', 'dozen', 'pack'];
-  
+
   const handleAdd = () => {
     if (!name.trim()) return;
-    
+
     const today = new Date();
     const expiryDate = new Date();
     expiryDate.setDate(today.getDate() + parseInt(expiryDays));
-    
+
     const newItem = {
       name: name.trim(),
       category,
@@ -39,12 +39,12 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
       expiryDate: expiryDate.toISOString().split('T')[0],
       image: getCategoryImage(category),
     };
-    
+
     onAdd(newItem);
     resetForm();
     onClose();
   };
-  
+
   const resetForm = () => {
     setName('');
     setCategory('other');
@@ -53,21 +53,28 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
     setNotes('');
     setExpiryDays('7');
   };
-  
-  const getCategoryImage = (cat) => {
+
+  const getCategoryImage = cat => {
     const images = {
-      dairy: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=200&h=200&fit=crop',
-      vegetables: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200&h=200&fit=crop',
-      fruits: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=200&h=200&fit=crop',
+      dairy:
+        'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=200&h=200&fit=crop',
+      vegetables:
+        'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=200&h=200&fit=crop',
+      fruits:
+        'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=200&h=200&fit=crop',
       meat: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=200&h=200&fit=crop',
-      beverages: 'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=200&h=200&fit=crop',
-      condiments: 'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=200&h=200&fit=crop',
-      frozen: 'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=200&h=200&fit=crop',
-      other: 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=200&h=200&fit=crop',
+      beverages:
+        'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=200&h=200&fit=crop',
+      condiments:
+        'https://images.unsplash.com/photo-1472476443507-c7a5948772fc?w=200&h=200&fit=crop',
+      frozen:
+        'https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=200&h=200&fit=crop',
+      other:
+        'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=200&h=200&fit=crop',
     };
     return images[cat] || images.other;
   };
-  
+
   return (
     <Modal
       visible={visible}
@@ -83,8 +90,11 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
               <Icon name="close" size={24} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
-          
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Item Name */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Item Name *</Text>
@@ -96,16 +106,16 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
                 placeholderTextColor={COLORS.textLight}
               />
             </View>
-            
+
             {/* Category */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Category</Text>
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.categoryScroll}
               >
-                {CATEGORIES.filter(c => c.id !== 'all').map((cat) => (
+                {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
                   <TouchableOpacity
                     key={cat.id}
                     style={[
@@ -114,15 +124,19 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
                     ]}
                     onPress={() => {
                       setCategory(cat.id);
-                      setExpiryDays(DEFAULT_EXPIRY_DAYS[cat.id]?.toString() || '7');
+                      setExpiryDays(
+                        DEFAULT_EXPIRY_DAYS[cat.id]?.toString() || '7',
+                      );
                     }}
                   >
-                    <Icon 
-                      name={cat.icon} 
-                      size={18} 
-                      color={category === cat.id ? '#FFF' : COLORS.textSecondary} 
+                    <Icon
+                      name={cat.icon}
+                      size={18}
+                      color={
+                        category === cat.id ? '#FFF' : COLORS.textSecondary
+                      }
                     />
-                    <Text 
+                    <Text
                       style={[
                         styles.categoryChipText,
                         category === cat.id && styles.categoryChipTextActive,
@@ -134,7 +148,7 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
                 ))}
               </ScrollView>
             </View>
-            
+
             {/* Quantity & Unit */}
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1 }]}>
@@ -150,12 +164,12 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
               </View>
               <View style={[styles.inputGroup, { flex: 1, marginLeft: 12 }]}>
                 <Text style={styles.label}>Unit</Text>
-                <ScrollView 
-                  horizontal 
+                <ScrollView
+                  horizontal
                   showsHorizontalScrollIndicator={false}
                   style={styles.unitScroll}
                 >
-                  {units.map((u) => (
+                  {units.map(u => (
                     <TouchableOpacity
                       key={u}
                       style={[
@@ -164,7 +178,7 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
                       ]}
                       onPress={() => setUnit(u)}
                     >
-                      <Text 
+                      <Text
                         style={[
                           styles.unitChipText,
                           unit === u && styles.unitChipTextActive,
@@ -177,12 +191,12 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
                 </ScrollView>
               </View>
             </View>
-            
+
             {/* Expiry Days */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Days until Expiry</Text>
               <View style={styles.expiryRow}>
-                {['3', '5', '7', '14', '30'].map((days) => (
+                {['3', '5', '7', '14', '30'].map(days => (
                   <TouchableOpacity
                     key={days}
                     style={[
@@ -191,7 +205,7 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
                     ]}
                     onPress={() => setExpiryDays(days)}
                   >
-                    <Text 
+                    <Text
                       style={[
                         styles.expiryChipText,
                         expiryDays === days && styles.expiryChipTextActive,
@@ -211,7 +225,7 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
                 />
               </View>
             </View>
-            
+
             {/* Notes */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Notes (optional)</Text>
@@ -226,13 +240,13 @@ const AddItemModal = ({ visible, onClose, onAdd }) => {
               />
             </View>
           </ScrollView>
-          
+
           <View style={styles.footer}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.addBtn, !name.trim() && styles.addBtnDisabled]} 
+            <TouchableOpacity
+              style={[styles.addBtn, !name.trim() && styles.addBtnDisabled]}
               onPress={handleAdd}
               disabled={!name.trim()}
             >
